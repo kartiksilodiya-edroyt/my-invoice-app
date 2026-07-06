@@ -9,7 +9,7 @@ export const APP_MARKUP = `
   <div class="shell" id="appShell" style="display:none;">
     <aside class="sidebar">
       <div class="logo">
-        <div class="logo-mark">Fidy<span>Invoice</span></div>
+        <div class="logo-mark">Invoice<span>Generator</span></div>
         <div class="logo-sub">Settlement Generator</div>
       </div>
       <div class="nav-item active" data-page="invoices"><span class="nav-icon">🧾</span> Generate Invoices</div>

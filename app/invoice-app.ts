@@ -102,7 +102,7 @@ export function initApp() {
     if (!card) return;
     card.innerHTML = `
     <div class="auth-logo">
-      <div class="logo-mark" style="font-size:20px;">Fidy<span>Invoice</span></div>
+      <div class="logo-mark" style="font-size:20px;">Invoice<span>Generator</span></div>
       <div class="logo-sub" style="margin-top:6px;">Settlement Generator</div>
     </div>
     <div class="auth-tabs">
@@ -364,7 +364,7 @@ ${!S.company ? `
   <div class="drop-zone" id="dropZone">
     <div class="drop-icon">📊</div>
     <div class="drop-label">Drop your .xlsx or .csv file here</div>
-    <div class="drop-sub">Fidypay settlement export format • Multiple rows = Multiple invoices</div>
+    <div class="drop-sub">Excel settlement export format • Multiple rows = Multiple invoices</div>
     <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
   </div>
   ${rows.length ? `
@@ -432,7 +432,7 @@ ${rows.length ? `
 <div class="empty">
   <div class="empty-icon">📊</div>
   <h3>No data loaded</h3>
-  <p>Upload your Fidypay settlement Excel above to get started.</p>
+  <p>Upload your Excel above to get started.</p>
 </div>`}
 
 ${gen.length ? `

@@ -343,7 +343,7 @@ export default function BuilderPage() {
 
       <aside className="ib3-nav">
         <div className="logo" style={{ marginBottom: 20 }}>
-          <div className="logo-mark">Fidy<span>Invoice</span></div>
+          <div className="logo-mark">Invoice<span>Generator</span></div>
           <div className="logo-sub">Invoice Builder</div>
         </div>
         <div className="ib3-nav-item" onClick={() => router.push('/')}>🧾 Back to App</div>
