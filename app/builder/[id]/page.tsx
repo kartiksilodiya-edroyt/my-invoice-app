@@ -51,8 +51,23 @@ type Action =
 
 function reducer(state: DraftRow, action: Action): DraftRow {
   switch (action.type) {
-    case 'SET_FIELD':
-      return { ...state, [action.field]: action.value };
+    case 'SET_FIELD': {
+  const updated = { ...state, [action.field]: action.value };
+  // Keep shipping fields in sync with billing while "Same as billing" is checked,
+  // so exports (which read _ship* fields) never go stale.
+  if (state._shipSameAsBilling) {
+    const billToShip: Record<string, string> = {
+      _billName: '_shipName',
+      _billAddress: '_shipAddress',
+      _billCity: '_shipCity',
+      _billState: '_shipState',
+      _billPin: '_shipPin',
+    };
+    const shipField = billToShip[action.field];
+    if (shipField) (updated as any)[shipField] = action.value;
+  }
+  return updated;
+}
     case 'SET_PRODUCT_FIELD': {
       const products = state._products.map((p, i) =>
         i === action.index ? recalcProduct({ ...p, [action.field]: action.value } as Product) : p
@@ -247,37 +262,14 @@ export default function BuilderPage() {
   const merchantLogo = useMemo(() => (profile ? getProfileLogo(profile) : null), [profile]);
 
 
-  const seller = useMemo(() => {
-    const name = profile?.name || company?.name;
-    const address = profile?.address || company?.address;
-    const city = profile?.city || company?.city;
-    const state = profile?.state || company?.state;
-    const pin = profile?.pin || company?.pin;
-
-    const locationLine = [city, state, pin].filter(Boolean).join(', ');
-    const addrLower = (address || '').toLowerCase();
-
-    // Skip the separate city/state/pin line if the address text
-    // already spells out that same location (avoids "Noida, UP, 201309"
-    // showing up twice when address is a single free-text field).
-    const locationAlreadyInAddress =
-      !!address &&
-      !!locationLine &&
-      (!city || addrLower.includes(city.toLowerCase())) &&
-      (!pin || addrLower.includes(pin.toLowerCase()));
-
-    return {
-      name,
-      address,
-      locationLine,
-      showLocationLine: !locationAlreadyInAddress,
-      gst: profile?.gst || company?.gst,
-      pan: profile?.pan || company?.pan,
-      signatory: profile?.signatory || company?.signatory,
-      designation: profile?.designation || company?.designation,
-    };
-  }, [profile, company]);
-
+const seller = useMemo(() => ({
+  name: profile?.name || company?.name,
+  address: profile?.address || company?.address, // already a complete address
+  gst: profile?.gst || company?.gst,
+  pan: profile?.pan || company?.pan,
+  signatory: profile?.signatory || company?.signatory,
+  designation: profile?.designation || company?.designation,
+}), [profile, company]);
   const dirty = row ? JSON.stringify(row) !== baselineRef.current : false;
 
   const setField = (field: string) => (v: string) => dispatch({ type: 'SET_FIELD', field, value: v });
@@ -583,12 +575,11 @@ export default function BuilderPage() {
             {/* ── Footer ── */}
             <div className="inv-footer">
               <div className="inv-sold-by">
-                <div className="co-name">{seller.name || 'Your Company'}</div>
-                <div>{seller.address}</div>
-                {seller.showLocationLine && <div>{seller.locationLine}</div>}
-                {seller.gst && <div>GST: {seller.gst}</div>}
-                {seller.pan && <div>PAN: {seller.pan}</div>}
-              </div>
+  <div className="co-name">{seller.name || 'Your Company'}</div>
+  <div>{seller.address}</div>
+  {seller.gst && <div>GST: {seller.gst}</div>}
+  {seller.pan && <div>PAN: {seller.pan}</div>}
+</div>
               <div className="inv-sign">
                 <div className="sig-line" />
                 <div className="sig-name">{seller.signatory || 'Authorised Signatory'}</div>
