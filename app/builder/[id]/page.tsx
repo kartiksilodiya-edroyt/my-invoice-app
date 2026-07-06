@@ -246,6 +246,38 @@ export default function BuilderPage() {
   const companyLogo = useMemo(() => getLogoSrc(company), [company]);
   const merchantLogo = useMemo(() => (profile ? getProfileLogo(profile) : null), [profile]);
 
+
+  const seller = useMemo(() => {
+    const name = profile?.name || company?.name;
+    const address = profile?.address || company?.address;
+    const city = profile?.city || company?.city;
+    const state = profile?.state || company?.state;
+    const pin = profile?.pin || company?.pin;
+
+    const locationLine = [city, state, pin].filter(Boolean).join(', ');
+    const addrLower = (address || '').toLowerCase();
+
+    // Skip the separate city/state/pin line if the address text
+    // already spells out that same location (avoids "Noida, UP, 201309"
+    // showing up twice when address is a single free-text field).
+    const locationAlreadyInAddress =
+      !!address &&
+      !!locationLine &&
+      (!city || addrLower.includes(city.toLowerCase())) &&
+      (!pin || addrLower.includes(pin.toLowerCase()));
+
+    return {
+      name,
+      address,
+      locationLine,
+      showLocationLine: !locationAlreadyInAddress,
+      gst: profile?.gst || company?.gst,
+      pan: profile?.pan || company?.pan,
+      signatory: profile?.signatory || company?.signatory,
+      designation: profile?.designation || company?.designation,
+    };
+  }, [profile, company]);
+
   const dirty = row ? JSON.stringify(row) !== baselineRef.current : false;
 
   const setField = (field: string) => (v: string) => dispatch({ type: 'SET_FIELD', field, value: v });
@@ -551,16 +583,16 @@ export default function BuilderPage() {
             {/* ── Footer ── */}
             <div className="inv-footer">
               <div className="inv-sold-by">
-                <div className="co-name">{company?.name || 'Your Company'}</div>
-                <div>{company?.address}</div>
-                <div>{[company?.city, company?.state, company?.pin].filter(Boolean).join(', ')}</div>
-                {company?.gst && <div>GST: {company.gst}</div>}
-                {company?.pan && <div>PAN: {company.pan}</div>}
+                <div className="co-name">{seller.name || 'Your Company'}</div>
+                <div>{seller.address}</div>
+                {seller.showLocationLine && <div>{seller.locationLine}</div>}
+                {seller.gst && <div>GST: {seller.gst}</div>}
+                {seller.pan && <div>PAN: {seller.pan}</div>}
               </div>
               <div className="inv-sign">
                 <div className="sig-line" />
-                <div className="sig-name">{company?.signatory || 'Authorised Signatory'}</div>
-                <div>{company?.designation || ''}</div>
+                <div className="sig-name">{seller.signatory || 'Authorised Signatory'}</div>
+                <div>{seller.designation || ''}</div>
               </div>
             </div>
           </div>
