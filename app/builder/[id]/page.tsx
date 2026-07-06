@@ -137,14 +137,13 @@ function EditableProductRow({ p, index, dispatch, canDelete }: {
 
   return (
     <tr ref={setNodeRef} style={style} className="pi-row">
-      <td className="pi-drag" {...attributes} {...listeners} title="Drag to reorder">⠿</td>
+      <td className="pi-drag" {...attributes} {...listeners} title="Drag to reorder">{index + 1}</td>
       <td style={{ textAlign: 'left' }}>
-        <PField value={p.description} onChange={set('description')} placeholder="Item description" />
+        <PField value={p.description} onChange={set('description')} placeholder="Product Description" />
         <PField value={p.hsn} onChange={set('hsn')} placeholder="HSN/SAC" className="pi-hsn" />
       </td>
-      <td><PField value={p.qty} onChange={set('qty')} className="pi-num" /></td>
       <td><PField value={p.rate} onChange={set('rate')} className="pi-num" /></td>
-      <td><PField value={p.discount} onChange={set('discount')} className="pi-num" /></td>
+      <td><PField value={p.qty} onChange={set('qty')} className="pi-num" /></td>
       <td className="pi-amount">{fmtINR(p.amount)}</td>
       <td className="pi-rowactions">
         <button className="pi-icon-btn" title="Duplicate" onClick={() => dispatch({ type: 'DUPLICATE_PRODUCT', index })}>⧉</button>
@@ -477,7 +476,14 @@ export default function BuilderPage() {
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <table className="inv-table pi-table">
                 <thead>
-                  <tr><th></th><th>Description</th><th>Qty</th><th>Rate</th><th>Disc.</th><th>Amount</th><th></th></tr>
+                  <tr>
+                    <th style={{ width: 50 }}>Sl.</th>
+                    <th style={{ width: '55%', textAlign: 'left' }}>Description</th>
+                    <th style={{ width: 120 }}>Unit Price</th>
+                    <th style={{ width: 70 }}>Qty</th>
+                    <th style={{ width: 130 }}>Amount</th>
+                    <th style={{ width: 80 }}></th>
+                  </tr>
                 </thead>
                 <tbody>
                   <SortableContext items={row._products.map((p: Product) => p.id)} strategy={verticalListSortingStrategy}>
@@ -487,7 +493,11 @@ export default function BuilderPage() {
                   </SortableContext>
                 </tbody>
                 <tfoot>
-                  <tr><td colSpan={5}>TOTAL:</td><td colSpan={2}>{gst ? fmtINR(gst.total) : '—'}</td></tr>
+                  <tr>
+                    <td colSpan={4} style={{ textAlign: 'right', fontWeight: 700, paddingRight: 15 }}>TOTAL:</td>
+                    <td style={{ textAlign: 'right', fontWeight: 700 }}>{gst ? fmtINR(gst.total) : '—'}</td>
+                    <td></td>
+                  </tr>
                 </tfoot>
               </table>
             </DndContext>
@@ -576,13 +586,12 @@ hr.inv-rule { border: none; border-top: 1.5px solid #222; margin: 18px 0; }
 .inv-addr-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #777; margin-bottom: 5px; border-bottom: 1px solid #e2e2e2; padding-bottom: 4px; }
 .inv-addr-body { font-size: 10.5px; color: #222; line-height: 1.75; word-break: break-word; }
 .inv-addr-body b { font-size: 11.5px; }
-table.inv-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10px; table-layout: fixed; color: #222; }
-table.inv-table th { background: #f2f2f2; border: 1px solid #ccc; padding: 9px 8px; text-align: center; font-weight: 700; font-size: 9.5px; color: #333; }
-table.inv-table th:nth-child(2) { text-align: left; }
-table.inv-table td { border: 1px solid #ddd; padding: 7px 8px; vertical-align: top; text-align: center; }
-table.inv-table td:nth-child(2) { text-align: left; }
-table.inv-table tr:nth-child(even) td { background: #fafafa; }
-table.inv-table tfoot td { text-align: right; font-weight: 700; }
+table.inv-table { width: 100%; border-collapse: collapse; margin-top: 18px; table-layout: fixed; color: #222; }
+table.inv-table th { background: #f5f5f5; border: 1px solid #cfcfcf; padding: 10px 8px; font-size: 10px; font-weight: 700; color: #222; }
+table.inv-table td { border: 1px solid #d8d8d8; padding: 8px; vertical-align: top; font-size: 10px; }
+table.inv-table th:nth-child(2), table.inv-table td:nth-child(2) { text-align: left; }
+table.inv-table th:not(:nth-child(2)), table.inv-table td:not(:nth-child(2)) { text-align: center; }
+table.inv-table tfoot td { font-weight: 700; }
 .inv-totals { margin-left: auto; width: 320px; border-collapse: collapse; margin-top: 16px; color: #222; }
 .inv-totals td { padding: 5px 8px; font-size: 10px; border: none; font-variant-numeric: tabular-nums; }
 .inv-totals td:first-child { text-align: left; color: #444; }
@@ -646,11 +655,11 @@ table.inv-table tfoot td { text-align: right; font-weight: 700; }
 .pi-checkbox input { cursor: pointer; }
 
 .pi-table td, .pi-table th { position: relative; }
-.pi-row:hover { background: #fbfcff; }
-.pi-drag { cursor: grab; color: #bbb; width: 18px; text-align: center; font-size: 12px; }
-.pi-num .pi-field { text-align: right; }
-.pi-hsn { font-size: 9px; color: #999; margin-top: 2px; }
-.pi-amount { font-weight: 700; text-align: right; white-space: nowrap; }
+.pi-row:hover { background: #fafcff; }
+.pi-drag { width: 45px; cursor: grab; font-weight: 600; text-align: center; }
+.pi-num { text-align: right; }
+.pi-hsn { margin-top: 4px; font-size: 9px; color: #888; }
+.pi-amount { text-align: right !important; font-weight: 700; white-space: nowrap; padding-right: 12px; }
 .pi-rowactions { white-space: nowrap; }
 .pi-icon-btn { border: none; background: transparent; color: #aaa; font-size: 11px; cursor: pointer; padding: 2px 4px; border-radius: 4px; }
 .pi-icon-btn:hover { background: #eef1f8; color: #333; }
