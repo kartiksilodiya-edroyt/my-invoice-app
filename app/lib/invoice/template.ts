@@ -1,15 +1,9 @@
 // ═══════════════════════════════════════════════════════════════
-// lib/invoice/templates.ts
-// Verbatim extraction of the INVOICE TEMPLATE REGISTRY section.
-//
-// Design note: resolveTemplate(profile, company) is the ONLY place
-// that needs the new `company` argument. It returns an object whose
-// buildHTML/buildPDF/buildDOCX keep the ORIGINAL 3-arg signature
-// (row, profile, invNum) — company is curried in here — so every
-// existing call site of `tpl.buildHTML(row, profile, invNum)` etc.
-// throughout invoice-app.ts stays completely unchanged. Only the
-// `resolveTemplate(profile)` call sites themselves need `S.company`
-// appended as a second argument.
+// lib/invoice/template.ts
+// Updated INVOICE TEMPLATE REGISTRY — adds a `lucidus` entry that
+// points at the standalone builder functions in ./lucidus.ts. Every
+// existing entry (default/agastron/modern) and resolveTemplate()'s
+// currying behavior is unchanged.
 // ═══════════════════════════════════════════════════════════════
 
 import { esc } from './utils';
@@ -18,6 +12,9 @@ import {
   buildInvoiceHTMLThemed, buildPDFThemed, buildDOCXThemed,
   AGASTRON_THEME, MODERN_THEME,
 } from './builder';
+import {
+  buildInvoiceHTMLLucidus, buildPDFLucidus, buildDOCXLucidus,
+} from './lucidus';
 
 const TEMPLATE_DEFS: any = {
   default: {
@@ -40,6 +37,13 @@ const TEMPLATE_DEFS: any = {
     buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLThemed(row, profile, invNum, MODERN_THEME, company),
     buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFThemed(row, profile, invNum, MODERN_THEME, company),
     buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXThemed(row, profile, invNum, MODERN_THEME, company),
+  },
+  lucidus: {
+    key: 'lucidus',
+    label: 'Lucidus',
+    buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLLucidus(row, profile, invNum, company),
+    buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFLucidus(row, profile, invNum, company),
+    buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXLucidus(row, profile, invNum, company),
   },
 };
 

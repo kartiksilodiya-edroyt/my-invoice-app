@@ -1,16 +1,37 @@
 'use client';
 
 // ═══════════════════════════════════════════════════════════════
-// app/builder/[id]/page.tsx — v2
+// app/builder/[id]/page.tsx — v3
 //
-// Same data model / same resolution logic as before (row-id or
-// merchant-profile-id, dbLoadRows / dbLoadDraftInvoice fallback).
-// What changed: the invoice PREVIEW is now the editor. Buyer,
-// shipping, dates, products (with drag-reorder), GST rate and
-// notes are all edited directly on the invoice paper. The old
-// tabbed right rail is gone — Save / PDF / DOCX / status live in
-// the top toolbar, and the left rail is just the merchant switcher.
-// Export still calls tpl.buildPDF / tpl.buildDOCX exactly as before.
+// FIX (this version): the editable on-screen preview was always
+// rendering the same hardcoded "default-family" layout regardless
+// of which template (default / agastron / modern / lucidus) was
+// selected on the merchant profile. `tpl` (resolveTemplate) was
+// only ever consulted for the toolbar label badge and for
+// tpl.buildPDF/tpl.buildDOCX at export time — never for the live
+// preview. So switching a profile to "Lucidus" and opening the
+// builder still showed the plain default paper; only the exported
+// PDF/DOCX actually looked like Lucidus.
+//
+// Fix: the header + billing/shipping section now branches on
+// `tpl.key`. When it's 'lucidus' we render a green-banner /
+// Sold-By-Bill-To-Ship-To-card layout that visually matches
+// buildInvoiceHTMLLucidus(), built out of the SAME editable
+// primitives (PField, dispatch/reducer) as before — so inline
+// editing, drag-reorder, dirty-state, etc. all keep working
+// unchanged. Everything below the address section (product table,
+// totals, notes, footer) is still the same shared JSX; a
+// `lucidus-skin` class on the paper wrapper reskins it (green table
+// header, tinted totals/footer) purely via CSS, so there's no
+// duplicated product-table logic to keep in sync.
+//
+// NOTE: default / agastron / modern are recolors of the same
+// structural layout in builder.ts (buildInvoiceHTMLThemed), so the
+// original hardcoded layout is still structurally correct for those
+// three — they just won't show the exact accent color in the editor
+// preview yet (only on export). If you want that too, share
+// AGASTRON_THEME / MODERN_THEME from builder.ts and the same
+// class-based skinning approach can be extended to them.
 // ═══════════════════════════════════════════════════════════════
 
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
@@ -168,12 +189,6 @@ function EditableProductRow({ p, index, dispatch, canDelete }: {
   );
 }
 
-type TabKey = 'products' | 'gst';
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'products', label: 'Products' },
-  { key: 'gst', label: 'GST' },
-];
-
 export default function BuilderPage() {
   const params = useParams();
   const router = useRouter();
@@ -257,6 +272,10 @@ export default function BuilderPage() {
 
   const invNum = useMemo(() => (row ? row['_invNum'] || genInvNum(row) : ''), [row]);
   const tpl = useMemo(() => resolveTemplate(profile, company), [profile, company]);
+  // ── FIX: drive the preview skin off the resolved template, not a
+  // hardcoded layout. Only Lucidus is structurally different from the
+  // default/agastron/modern family, so that's the branch that matters.
+  const isLucidus = tpl.key === 'lucidus';
   const gst = useMemo(() => (row ? getGSTInfo(row, profile, company) : null), [row, profile, company]);
   const companyLogo = useMemo(() => getLogoSrc(company), [company]);
   const merchantLogo = useMemo(() => (profile ? getProfileLogo(profile) : null), [profile]);
@@ -344,8 +363,6 @@ const seller = useMemo(() => ({
     router.push(`/builder/${profileId}`);
   }
 
-  const [tab, setTab] = useState<TabKey>('gst');
-
   if (loading) {
     return <div className="ib3-status">Loading invoice…</div>;
   }
@@ -408,95 +425,208 @@ const seller = useMemo(() => ({
         </div>
 
         <div className="ib3-preview-scroll">
-          <div className="inv-paper pi-paper">
-            {/* ── Header ── */}
-            <div className="inv-top">
-              <div className="inv-title-block">
-                <h2>Tax Invoice</h2>
-                <p>(Original for Recipient)</p>
-              </div>
-              <div className="inv-logo">
-                {merchantLogo
-                  ? <img src={merchantLogo} alt="" style={{ maxHeight: 44, maxWidth: 200, objectFit: 'contain' }} />
-                  : companyLogo
-                    ? <img src={companyLogo} alt="" style={{ maxHeight: 44, maxWidth: 200, objectFit: 'contain' }} />
-                    : <span>{company?.name || 'Your Company'}</span>}
-              </div>
-            </div>
+          <div className={'inv-paper pi-paper' + (isLucidus ? ' lucidus-skin' : '')}>
 
-            <div className="inv-meta">
-              <div>
-                <span>Invoice Number:</span>
-                <PField value={row._invNum} onChange={setField('_invNum')} placeholder={invNum} className="pi-inline pi-strong" />
-              </div>
-              <div>
-                <span>Transaction Date:</span>
-                <PField value={row['Transaction Date']} onChange={setField('Transaction Date')} placeholder="DD/MM/YYYY" className="pi-inline" />
-              </div>
-              <div>
-                <span>Settlement / Ref ID:</span>
-                <PField value={row['Seller Settlement Records ID']} onChange={setField('Seller Settlement Records ID')} className="pi-inline" />
-              </div>
-              <div>
-                <span>UTR Number:</span>
-                <PField value={row['Transaction UTR Number']} onChange={setField('Transaction UTR Number')} className="pi-inline" />
-              </div>
-            </div>
-
-            <hr className="inv-rule" />
-
-            {/* ── Billing / Shipping ── */}
-            <div className="inv-addr-stack">
-              <div className="inv-addr-block">
-                <div className="inv-addr-label">Billing Address</div>
-                <div className="inv-addr-body">
-                  <PField value={row._billName} onChange={setField('_billName')} placeholder="Buyer name" className="pi-strong pi-block" />
-                  <PField as="textarea" rows={2} value={row._billAddress} onChange={setField('_billAddress')} placeholder="Address" className="pi-block" />
-                  <div className="pi-grid3">
-                    <PField value={row._billCity} onChange={setField('_billCity')} placeholder="City" />
-                    <PField value={row._billState} onChange={setField('_billState')} placeholder="State" />
-                    <PField value={row._billPin} onChange={setField('_billPin')} placeholder="PIN" />
+            {isLucidus ? (
+              /* ═══ LUCIDUS HEADER + ADDRESS CARDS ═══
+                 Mirrors buildInvoiceHTMLLucidus()'s green banner +
+                 Sold By / Bill To / Ship To cards, but built from the
+                 same editable PField primitives / dispatch actions as
+                 the default layout below — so editing behaves
+                 identically, only the skin differs. */
+              <>
+                <div className="lucidus-banner">
+                  <div>
+                    {merchantLogo
+                      ? <img src={merchantLogo} alt="" style={{ maxHeight: 40, maxWidth: 180, objectFit: 'contain' }} />
+                      : companyLogo
+                        ? <img src={companyLogo} alt="" style={{ maxHeight: 40, maxWidth: 180, objectFit: 'contain' }} />
+                        : <span className="lucidus-banner-coname">{company?.name || 'Your Company'}</span>}
                   </div>
-                  <div className="pi-grid2">
-                    <PField value={row._billGST} onChange={setField('_billGST')} placeholder="GST Number" />
-                    <PField value={row._billPAN} onChange={setField('_billPAN')} placeholder="PAN Number" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="inv-addr-block ship">
-                <div className="inv-addr-label" style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, alignItems: 'center' }}>
-                  <label className="pi-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={!!row._shipSameAsBilling}
-                      onChange={e => dispatch({ type: 'SET_SHIP_SAME', value: e.target.checked })}
-                    />
-                    Same as billing
-                  </label>
-                  Shipping Address
-                </div>
-                {row._shipSameAsBilling ? (
-                  <div className="inv-addr-body" style={{ opacity: 0.55 }}>
-                    <b>{row._billName || '—'}</b>
-                    <div>{row._billAddress || '—'}</div>
-                    <div>{[row._billCity, row._billState, row._billPin].filter(Boolean).join(', ')}</div>
-                  </div>
-                ) : (
-                  <div className="inv-addr-body">
-                    <PField value={row._shipName} onChange={setField('_shipName')} placeholder="Recipient name" className="pi-strong pi-block" style={{ textAlign: 'right' }} />
-                    <PField as="textarea" rows={2} value={row._shipAddress} onChange={setField('_shipAddress')} placeholder="Address" className="pi-block" style={{ textAlign: 'right' }} />
-                    <div className="pi-grid3">
-                      <PField value={row._shipCity} onChange={setField('_shipCity')} placeholder="City" />
-                      <PField value={row._shipState} onChange={setField('_shipState')} placeholder="State" />
-                      <PField value={row._shipPin} onChange={setField('_shipPin')} placeholder="PIN" />
+                  <div>
+                    <div className="lucidus-title">Tax Invoice</div>
+                    <div className="lucidus-meta-row">
+                      Invoice <PField value={row._invNum} onChange={setField('_invNum')} placeholder={invNum} className="pi-inline" />
+                    </div>
+                    <div className="lucidus-meta-row">
+                      Date <PField value={row['Transaction Date']} onChange={setField('Transaction Date')} placeholder="DD/MM/YYYY" className="pi-inline" />
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
 
-            {/* ── Products ── */}
+                <div className="lucidus-meta-extra">
+                  <div><span>Settlement / Ref ID:</span><PField value={row['Seller Settlement Records ID']} onChange={setField('Seller Settlement Records ID')} className="pi-inline" /></div>
+                  <div><span>UTR Number:</span><PField value={row['Transaction UTR Number']} onChange={setField('Transaction UTR Number')} className="pi-inline" /></div>
+                </div>
+
+                <div className="lucidus-cards">
+                  <div className="lucidus-card">
+                    <div className="lucidus-card-label">Sold By</div>
+                    <div className="inv-addr-body">
+                      <b>{seller.name || 'Your Company'}</b>
+                      <div>{seller.address}</div>
+                      {seller.gst && <div>GST: {seller.gst}</div>}
+                      {seller.pan && <div>PAN: {seller.pan}</div>}
+                    </div>
+                  </div>
+
+                  <div className="lucidus-ship-stack">
+                    <div className="lucidus-card">
+                      <div className="lucidus-card-label">Bill To</div>
+                      <div className="inv-addr-body">
+                        <PField value={row._billName} onChange={setField('_billName')} placeholder="Buyer name" className="pi-strong pi-block" />
+                        <PField as="textarea" rows={2} value={row._billAddress} onChange={setField('_billAddress')} placeholder="Address" className="pi-block" />
+                        <div className="pi-grid3">
+                          <PField value={row._billCity} onChange={setField('_billCity')} placeholder="City" />
+                          <PField value={row._billState} onChange={setField('_billState')} placeholder="State" />
+                          <PField value={row._billPin} onChange={setField('_billPin')} placeholder="PIN" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="lucidus-card">
+                      <div className="lucidus-card-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>Ship To</span>
+                        <label className="pi-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={!!row._shipSameAsBilling}
+                            onChange={e => dispatch({ type: 'SET_SHIP_SAME', value: e.target.checked })}
+                          />
+                          Same as billing
+                        </label>
+                      </div>
+                      {row._shipSameAsBilling ? (
+                        <div className="inv-addr-body" style={{ opacity: 0.6 }}>
+                          <b>{row._billName || '—'}</b>
+                          <div>{row._billAddress || '—'}</div>
+                          <div>{[row._billCity, row._billState, row._billPin].filter(Boolean).join(', ')}</div>
+                        </div>
+                      ) : (
+                        <div className="inv-addr-body">
+                          <PField value={row._shipName} onChange={setField('_shipName')} placeholder="Recipient name" className="pi-strong pi-block" />
+                          <PField as="textarea" rows={2} value={row._shipAddress} onChange={setField('_shipAddress')} placeholder="Address" className="pi-block" />
+                          <div className="pi-grid3">
+                            <PField value={row._shipCity} onChange={setField('_shipCity')} placeholder="City" />
+                            <PField value={row._shipState} onChange={setField('_shipState')} placeholder="State" />
+                            <PField value={row._shipPin} onChange={setField('_shipPin')} placeholder="PIN" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Buyer tax details — pulled out of the Bill To card into
+                    its own labeled strip, matching how GSTIN/PAN are shown
+                    on standard GST invoices (separate line, not buried in
+                    the address block). */}
+                {/* <div className="lucidus-taxbar">
+                  <div className="lucidus-taxbar-item">
+                    <span className="lucidus-taxbar-label">Buyer GSTIN</span>
+                    <PField value={row._billGST} onChange={setField('_billGST')} placeholder="GST Number" className="pi-inline" />
+                  </div>
+                  <div className="lucidus-taxbar-item">
+                    <span className="lucidus-taxbar-label">Buyer PAN</span>
+                    <PField value={row._billPAN} onChange={setField('_billPAN')} placeholder="PAN Number" className="pi-inline" />
+                  </div>
+                </div> */}
+              </>
+            ) : (
+              /* ═══ DEFAULT / AGASTRON / MODERN HEADER + ADDRESS ═══
+                 Unchanged from before — these three share the same
+                 structural layout in builder.ts (buildInvoiceHTMLThemed),
+                 just recolored, so this generic layout stays correct
+                 for all three. */
+              <>
+                <div className="inv-top">
+                  <div className="inv-title-block">
+                    <h2>Tax Invoice</h2>
+                    <p>(Original for Recipient)</p>
+                  </div>
+                  <div className="inv-logo">
+                    {merchantLogo
+                      ? <img src={merchantLogo} alt="" style={{ maxHeight: 44, maxWidth: 200, objectFit: 'contain' }} />
+                      : companyLogo
+                        ? <img src={companyLogo} alt="" style={{ maxHeight: 44, maxWidth: 200, objectFit: 'contain' }} />
+                        : <span>{company?.name || 'Your Company'}</span>}
+                  </div>
+                </div>
+
+                <div className="inv-meta">
+                  <div>
+                    <span>Invoice Number:</span>
+                    <PField value={row._invNum} onChange={setField('_invNum')} placeholder={invNum} className="pi-inline pi-strong" />
+                  </div>
+                  <div>
+                    <span>Transaction Date:</span>
+                    <PField value={row['Transaction Date']} onChange={setField('Transaction Date')} placeholder="DD/MM/YYYY" className="pi-inline" />
+                  </div>
+                  <div>
+                    <span>Settlement / Ref ID:</span>
+                    <PField value={row['Seller Settlement Records ID']} onChange={setField('Seller Settlement Records ID')} className="pi-inline" />
+                  </div>
+                  <div>
+                    <span>UTR Number:</span>
+                    <PField value={row['Transaction UTR Number']} onChange={setField('Transaction UTR Number')} className="pi-inline" />
+                  </div>
+                </div>
+
+                <hr className="inv-rule" />
+
+                <div className="inv-addr-stack">
+                  <div className="inv-addr-block">
+                    <div className="inv-addr-label">Billing Address</div>
+                    <div className="inv-addr-body">
+                      <PField value={row._billName} onChange={setField('_billName')} placeholder="Buyer name" className="pi-strong pi-block" />
+                      <PField as="textarea" rows={2} value={row._billAddress} onChange={setField('_billAddress')} placeholder="Address" className="pi-block" />
+                      <div className="pi-grid3">
+                        <PField value={row._billCity} onChange={setField('_billCity')} placeholder="City" />
+                        <PField value={row._billState} onChange={setField('_billState')} placeholder="State" />
+                        <PField value={row._billPin} onChange={setField('_billPin')} placeholder="PIN" />
+                      </div>
+                      <div className="pi-grid2">
+                        <PField value={row._billGST} onChange={setField('_billGST')} placeholder="GST Number" />
+                        <PField value={row._billPAN} onChange={setField('_billPAN')} placeholder="PAN Number" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="inv-addr-block ship">
+                    <div className="inv-addr-label" style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, alignItems: 'center' }}>
+                      <label className="pi-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={!!row._shipSameAsBilling}
+                          onChange={e => dispatch({ type: 'SET_SHIP_SAME', value: e.target.checked })}
+                        />
+                        Same as billing
+                      </label>
+                      Shipping Address
+                    </div>
+                    {row._shipSameAsBilling ? (
+                      <div className="inv-addr-body" style={{ opacity: 0.55 }}>
+                        <b>{row._billName || '—'}</b>
+                        <div>{row._billAddress || '—'}</div>
+                        <div>{[row._billCity, row._billState, row._billPin].filter(Boolean).join(', ')}</div>
+                      </div>
+                    ) : (
+                      <div className="inv-addr-body">
+                        <PField value={row._shipName} onChange={setField('_shipName')} placeholder="Recipient name" className="pi-strong pi-block" style={{ textAlign: 'right' }} />
+                        <PField as="textarea" rows={2} value={row._shipAddress} onChange={setField('_shipAddress')} placeholder="Address" className="pi-block" style={{ textAlign: 'right' }} />
+                        <div className="pi-grid3">
+                          <PField value={row._shipCity} onChange={setField('_shipCity')} placeholder="City" />
+                          <PField value={row._shipState} onChange={setField('_shipState')} placeholder="State" />
+                          <PField value={row._shipPin} onChange={setField('_shipPin')} placeholder="PIN" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* ── Products (shared by every template — only reskinned via .lucidus-skin CSS) ── */}
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <table className="inv-table pi-table">
                 <thead>
@@ -694,4 +824,32 @@ table.inv-table tfoot td { font-weight: 700; }
 .pi-notes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 18px; padding-top: 14px; border-top: 1px dashed #ddd; }
 .pi-notes-grid textarea { font-size: 10.5px; border: 1px solid transparent; }
 .pi-notes-grid textarea:hover, .pi-notes-grid textarea:focus { border-color: #dde3f5; }
+
+/* ── Lucidus skin — applied when tpl.key === 'lucidus'.
+   Reskins the shared paper (banner + cards up top, green table
+   header + tinted totals/footer below) without touching the
+   editable primitives or data flow. Colors match lucidus.ts
+   (ACCENT_HEX / TINT_HEX / DARK_TEXT_HEX) so preview == export. ── */
+.lucidus-skin { padding-top: 0; overflow: hidden; }
+.lucidus-banner { background: #0F6E56; margin: 0 -48px 20px; padding: 22px 48px; display: flex; justify-content: space-between; align-items: flex-start; }
+.lucidus-banner-coname { color: #fff; font-size: 20px; font-weight: 900; letter-spacing: -0.5px; }
+.lucidus-title { color: #fff; font-size: 13px; font-weight: 700; text-align: right; }
+.lucidus-meta-row { color: #EAF3DE; font-size: 10.5px; text-align: right; margin-top: 4px; }
+.lucidus-banner .pi-field { color: #EAF3DE; text-align: right; display: inline-block; width: auto; min-width: 90px; margin-left: 4px; }
+.lucidus-banner .pi-field::placeholder { color: #cfe6c4; }
+.lucidus-banner .pi-field:hover, .lucidus-banner .pi-field:focus { background: rgba(255,255,255,0.14); border-bottom-color: rgba(255,255,255,0.5); }
+.lucidus-meta-extra { text-align: right; font-size: 10px; color: #555; margin-bottom: 14px; }
+.lucidus-meta-extra div { display: flex; justify-content: flex-end; gap: 4px; margin-bottom: 3px; }
+.lucidus-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 0 0 20px; }
+.lucidus-card { border: 1px solid #e2e2e2; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; }
+.lucidus-card-label { font-size: 9px; font-weight: 700; letter-spacing: 0.5px; color: #0F6E56; text-transform: uppercase; margin-bottom: 6px; }
+.lucidus-taxbar { display: flex; gap: 24px; background: #EAF3DE; border-radius: 6px; padding: 8px 14px; margin: 0 0 18px; }
+.lucidus-taxbar-item { display: flex; align-items: center; gap: 6px; font-size: 10.5px; }
+.lucidus-taxbar-label { font-size: 9px; font-weight: 700; letter-spacing: 0.4px; color: #0F6E56; text-transform: uppercase; }
+.lucidus-taxbar .pi-field { color: #173404; font-weight: 600; min-width: 130px; }
+.lucidus-taxbar .pi-field::placeholder { color: #6f9469; }
+.lucidus-skin table.pi-table th { background: #0F6E56 !important; color: #fff; border-color: #0F6E56; }
+.lucidus-skin table.pi-table tbody tr:nth-child(even) td { background: #EAF3DE; }
+.lucidus-skin .pi-totals .total-final td { border-top-color: #0F6E56; color: #173404; }
+.lucidus-skin .inv-footer { background: #EAF3DE; margin: 28px -48px -40px; padding: 16px 48px; border-top: none; }
 `;

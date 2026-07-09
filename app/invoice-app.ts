@@ -703,7 +703,9 @@ ${S.profiles.length ? `
         ${p.sellerId ? `ID: ${esc(p.sellerId)}<br>` : ''}
         ${[p.city, p.state].filter(Boolean).join(', ')}<br>
         ${p.gst ? `GST: ${esc(p.gst)}<br>` : ''}${p.pan ? `PAN: ${esc(p.pan)}<br>` : ''}
-        <span class="badge badge-dim" style="margin-top:4px;font-size:10px;">${esc(resolveTemplate(p, S.company).label)} template</span>
+        <select class="tpl-switch" data-tpl-profile="${esc(p.id)}" style="margin-top:6px;width:100%;font-size:10px;padding:3px 4px;">
+  ${templateOptionsHTML(p.template || 'default')}
+</select>
       </div>
       <button class="btn btn-primary btn-xs" style="margin-top:8px;width:100%;justify-content:center;" data-open-builder="${esc(p.id)}">🎨 Open Invoice Builder</button>
     </div>`).join('')}
@@ -730,6 +732,19 @@ ${S.profiles.length ? `
       pendingLogoB64 = null;
       if (logoPreview) logoPreview.innerHTML = `<span class="logo-placeholder">No logo — click Upload</span>`;
     });
+
+    document.querySelectorAll('[data-tpl-profile]').forEach(sel => {
+  sel.addEventListener('change', async (e: any) => {
+    const id = (sel as HTMLElement).dataset.tplProfile;
+    const profileObj = S.profiles.find((pr: any) => pr.id === id);
+    if (!profileObj) return;
+    profileObj.template = e.target.value;
+    try {
+      if (supaReady) { await dbSaveProfiles(supa, S.profiles); toast('Template updated.', 'good'); }
+    } catch (err) { toast('Could not save template change.', 'bad'); }
+    render();
+  });
+});
 
     document.getElementById('saveProfileBtn')?.addEventListener('click', async () => {
       const name = (document.getElementById('pf_name') as HTMLInputElement).value.trim();

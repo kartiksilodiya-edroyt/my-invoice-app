@@ -1,22 +1,5 @@
 'use client';
 
-// ═══════════════════════════════════════════════════════════════
-// InvoiceBuilder.tsx — NEW FILE. Phase 2.
-//
-// This component does NOT reimplement GST math, invoice HTML, PDF,
-// or DOCX generation. Every calculation and every export call is
-// delegated to the SAME functions invoice-app.ts already uses
-// (getGSTInfo, calcGST, resolveTemplate().buildPDF/buildDOCX, etc.),
-// passed in via the `api` prop. This component only owns: draft
-// state, the spreadsheet-style product editor, and the layout.
-//
-// It is mounted by invoice-app.ts via `createRoot(...).render(...)`
-// from inside initApp()'s closure — see the openInvoiceBuilder()
-// patch for invoice-app.ts. That's what lets this component call
-// the real getGSTInfo/calcGST without any of those functions being
-// exported or moved.
-// ═══════════════════════════════════════════════════════════════
-
 import React, { useMemo, useReducer, useState } from 'react';
 
 export type Product = {
