@@ -1,9 +1,9 @@
 // ═══════════════════════════════════════════════════════════════
 // lib/invoice/template.ts
-// Updated INVOICE TEMPLATE REGISTRY — adds a `lucidus` entry that
-// points at the standalone builder functions in ./lucidus.ts. Every
-// existing entry (default/agastron/modern) and resolveTemplate()'s
-// currying behavior is unchanged.
+// Adds `itsquad` and `keshavi` entries pointing at the new
+// standalone builder functions in ./itsquad.ts and ./keshavi.ts.
+// Every existing entry (default/agastron/modern/lucidus) and
+// resolveTemplate()'s currying behavior is unchanged.
 // ═══════════════════════════════════════════════════════════════
 
 import { esc } from './utils';
@@ -15,6 +15,12 @@ import {
 import {
   buildInvoiceHTMLLucidus, buildPDFLucidus, buildDOCXLucidus,
 } from './lucidus';
+import {
+  buildInvoiceHTMLItsquad, buildPDFItsquad, buildDOCXItsquad,
+} from './itsquad';
+import {
+  buildInvoiceHTMLKeshavi, buildPDFKeshavi, buildDOCXKeshavi,
+} from './keshavi';
 
 const TEMPLATE_DEFS: any = {
   default: {
@@ -44,6 +50,20 @@ const TEMPLATE_DEFS: any = {
     buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLLucidus(row, profile, invNum, company),
     buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFLucidus(row, profile, invNum, company),
     buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXLucidus(row, profile, invNum, company),
+  },
+  itsquad: {
+    key: 'itsquad',
+    label: 'IT Squad',
+    buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLItsquad(row, profile, invNum, company),
+    buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFItsquad(row, profile, invNum, company),
+    buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXItsquad(row, profile, invNum, company),
+  },
+  keshavi: {
+    key: 'keshavi',
+    label: 'Keshavi',
+    buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLKeshavi(row, profile, invNum, company),
+    buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFKeshavi(row, profile, invNum, company),
+    buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXKeshavi(row, profile, invNum, company),
   },
 };
 

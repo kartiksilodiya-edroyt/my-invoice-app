@@ -1,37 +1,27 @@
 'use client';
 
 // ═══════════════════════════════════════════════════════════════
-// app/builder/[id]/page.tsx — v3
+// app/builder/[id]/page.tsx — v6
 //
-// FIX (this version): the editable on-screen preview was always
-// rendering the same hardcoded "default-family" layout regardless
-// of which template (default / agastron / modern / lucidus) was
-// selected on the merchant profile. `tpl` (resolveTemplate) was
-// only ever consulted for the toolbar label badge and for
-// tpl.buildPDF/tpl.buildDOCX at export time — never for the live
-// preview. So switching a profile to "Lucidus" and opening the
-// builder still showed the plain default paper; only the exported
-// PDF/DOCX actually looked like Lucidus.
+// v6 (this version): itsquad / keshavi no longer render a static,
+// non-editable tpl.buildHTML() preview with a separate detached
+// "Invoice details" form bolted on below it. That two-piece layout
+// was the source of the reported issue — editing didn't feel like
+// editing the invoice, it felt like editing a form next to a picture
+// of one. Now itsquad and keshavi are hand-built JSX papers, exactly
+// like default/agastron/modern/lucidus already are: every field
+// (company block, bill/invoice number, date, patient/buyer name,
+// address, line items, totals) is an inline PField/editable control
+// sitting directly on the white invoice paper, styled to match each
+// template's real look (itsquad: bordered pharmacy "Tax Invoice" box;
+// keshavi: thin-gray-rule marketplace invoice). Same dispatch/reducer
+// and shared product table as every other template, so behavior
+// (drag reorder, duplicate, delete, GST rate select, etc.) is
+// consistent across all templates.
 //
-// Fix: the header + billing/shipping section now branches on
-// `tpl.key`. When it's 'lucidus' we render a green-banner /
-// Sold-By-Bill-To-Ship-To-card layout that visually matches
-// buildInvoiceHTMLLucidus(), built out of the SAME editable
-// primitives (PField, dispatch/reducer) as before — so inline
-// editing, drag-reorder, dirty-state, etc. all keep working
-// unchanged. Everything below the address section (product table,
-// totals, notes, footer) is still the same shared JSX; a
-// `lucidus-skin` class on the paper wrapper reskins it (green table
-// header, tinted totals/footer) purely via CSS, so there's no
-// duplicated product-table logic to keep in sync.
-//
-// NOTE: default / agastron / modern are recolors of the same
-// structural layout in builder.ts (buildInvoiceHTMLThemed), so the
-// original hardcoded layout is still structurally correct for those
-// three — they just won't show the exact accent color in the editor
-// preview yet (only on export). If you want that too, share
-// AGASTRON_THEME / MODERN_THEME from builder.ts and the same
-// class-based skinning approach can be extended to them.
+// Lucidus and default/agastron/modern are unchanged from v5, aside
+// from being folded into the same "which header do I render" switch
+// as itsquad/keshavi instead of a separate isMono branch.
 // ═══════════════════════════════════════════════════════════════
 
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
@@ -272,14 +262,19 @@ export default function BuilderPage() {
 
   const invNum = useMemo(() => (row ? row['_invNum'] || genInvNum(row) : ''), [row]);
   const tpl = useMemo(() => resolveTemplate(profile, company), [profile, company]);
-  // ── FIX: drive the preview skin off the resolved template, not a
-  // hardcoded layout. Only Lucidus is structurally different from the
-  // default/agastron/modern family, so that's the branch that matters.
+  // ── Drive the preview skin off the resolved template. Every
+  // template — default/agastron/modern, lucidus, itsquad, keshavi —
+  // now renders as a hand-built, directly-editable JSX paper. Only
+  // the header markup + CSS skin differ per template; the product
+  // table, totals, notes and footer are shared so editing behavior
+  // (drag reorder, GST rate select, duplicate/delete) stays
+  // consistent everywhere.
   const isLucidus = tpl.key === 'lucidus';
+  const isItsquad = tpl.key === 'itsquad';
+  const isKeshavi = tpl.key === 'keshavi';
   const gst = useMemo(() => (row ? getGSTInfo(row, profile, company) : null), [row, profile, company]);
   const companyLogo = useMemo(() => getLogoSrc(company), [company]);
   const merchantLogo = useMemo(() => (profile ? getProfileLogo(profile) : null), [profile]);
-
 
 const seller = useMemo(() => ({
   name: profile?.name || company?.name,
@@ -376,6 +371,7 @@ const seller = useMemo(() => ({
   }
 
   const filteredProfiles = profiles.filter((p: any) => p.name.toLowerCase().includes(merchantFilter.toLowerCase()));
+  const skinClass = isLucidus ? ' lucidus-skin' : isItsquad ? ' itsquad-skin' : isKeshavi ? ' keshavi-skin' : '';
 
   return (
     <div className="ib3-root">
@@ -425,15 +421,11 @@ const seller = useMemo(() => ({
         </div>
 
         <div className="ib3-preview-scroll">
-          <div className={'inv-paper pi-paper' + (isLucidus ? ' lucidus-skin' : '')}>
+
+          <div className={'inv-paper pi-paper' + skinClass}>
 
             {isLucidus ? (
-              /* ═══ LUCIDUS HEADER + ADDRESS CARDS ═══
-                 Mirrors buildInvoiceHTMLLucidus()'s green banner +
-                 Sold By / Bill To / Ship To cards, but built from the
-                 same editable PField primitives / dispatch actions as
-                 the default layout below — so editing behaves
-                 identically, only the skin differs. */
+              /* ═══ LUCIDUS HEADER + ADDRESS CARDS ═══ */
               <>
                 <div className="lucidus-banner">
                   <div>
@@ -516,28 +508,130 @@ const seller = useMemo(() => ({
                     </div>
                   </div>
                 </div>
+              </>
+            ) : isItsquad ? (
+              /* ═══ IT SQUAD HEADER — pharmacy-style "Tax Invoice" box.
+                 Logo sits above the company name (never overlapping —
+                 it's a normal block-level flow, unlike the old
+                 dangerouslySetInnerHTML preview which had a PDF-only
+                 vertical-offset bug), Bill No/Date/Time top-right,
+                 Pt. Name/Address directly below — all inline-editable. ══ */
+              <>
+                <div className="itsquad-title">TAX INVOICE</div>
+                <div className="inv-top itsquad-top">
+                  <div className="itsquad-co-block">
+                    {(merchantLogo || companyLogo) && (
+                      <div className="itsquad-logo">
+                        <img src={merchantLogo || companyLogo} alt="" style={{ maxHeight: 30, maxWidth: 130, objectFit: 'contain' }} />
+                      </div>
+                    )}
+                    <div className="itsquad-coname">{seller.name || company?.name || 'Your Company'}</div>
+                    {seller.address && <div className="itsquad-coaddr">{seller.address}</div>}
+                  </div>
+                  <div className="itsquad-billbox">
+                    <div><b>Bill No.:</b> <PField value={row._invNum} onChange={setField('_invNum')} placeholder={invNum} className="pi-inline" /></div>
+                    <div><b>Date:</b> <PField value={row['Transaction Date']} onChange={setField('Transaction Date')} placeholder="DD/MM/YYYY" className="pi-inline" /></div>
+                    <div><b>Time:</b> <PField value={row._billTime} onChange={setField('_billTime')} placeholder="HH:MM" className="pi-inline" /></div>
+                  </div>
+                </div>
 
-                {/* Buyer tax details — pulled out of the Bill To card into
-                    its own labeled strip, matching how GSTIN/PAN are shown
-                    on standard GST invoices (separate line, not buried in
-                    the address block). */}
-                {/* <div className="lucidus-taxbar">
-                  <div className="lucidus-taxbar-item">
-                    <span className="lucidus-taxbar-label">Buyer GSTIN</span>
-                    <PField value={row._billGST} onChange={setField('_billGST')} placeholder="GST Number" className="pi-inline" />
+                <hr className="inv-rule" />
+
+                <div className="itsquad-pt">
+                  <div><b>Name:</b> <PField value={row._billName} onChange={setField('_billName')} placeholder="Buyer / patient name" className="pi-inline" style={{ minWidth: 220 }} /></div>
+                  <div><b>Address:</b> <PField value={row._billAddress} onChange={setField('_billAddress')} placeholder="Address" className="pi-inline" style={{ minWidth: 320 }} /></div>
+                  <div className="pi-grid3">
+                    <PField value={row._billCity} onChange={setField('_billCity')} placeholder="City" />
+                    <PField value={row._billState} onChange={setField('_billState')} placeholder="State" />
+                    <PField value={row._billPin} onChange={setField('_billPin')} placeholder="PIN" />
                   </div>
-                  <div className="lucidus-taxbar-item">
-                    <span className="lucidus-taxbar-label">Buyer PAN</span>
-                    <PField value={row._billPAN} onChange={setField('_billPAN')} placeholder="PAN Number" className="pi-inline" />
+                </div>
+
+                <hr className="inv-rule" />
+              </>
+            ) : isKeshavi ? (
+              /* ═══ KESHAVI HEADER — thin-gray-rule marketplace invoice.
+                 Sold By left, logo + invoice-number box right (logo is a
+                 normal block above the box, so it can't run into it),
+                 Order ID/Date left / Billing Address right below. ══ */
+              <>
+                <div className="keshavi-title">Tax Invoice</div>
+                <div className="inv-top keshavi-top">
+                  <div className="keshavi-soldby">
+                    <div>Sold By: <b>{seller.name || company?.name || 'Your Company'}</b>,</div>
+                    {seller.address && <div><i>Ship-from Address:</i> {seller.address}</div>}
+                    {seller.gst && <div><b>GSTIN</b> - {seller.gst}</div>}
                   </div>
-                </div> */}
+                  <div className="keshavi-logobox">
+                    {(merchantLogo || companyLogo) && (
+                      <img src={merchantLogo || companyLogo} alt="" style={{ maxHeight: 34, maxWidth: 150, objectFit: 'contain' }} />
+                    )}
+                    <div className="keshavi-invbox">
+                      Invoice Number # <PField value={row._invNum} onChange={setField('_invNum')} placeholder={invNum} className="pi-inline" />
+                    </div>
+                  </div>
+                </div>
+
+                <hr className="inv-rule" />
+<div className="keshavi-meta">
+                  <div className="keshavi-meta-left">
+                    <div>Order ID: <PField value={row['Seller Settlement Records ID']} onChange={setField('Seller Settlement Records ID')} className="pi-inline" /></div>
+                    <div>Order Date: <PField value={row['Transaction Date']} onChange={setField('Transaction Date')} placeholder="DD/MM/YYYY" className="pi-inline" /></div>
+                  </div>
+                  <div className="keshavi-meta-right">
+                    <div className="inv-addr-label" style={{ textAlign: 'right' }}>Billing Address</div>
+                    <PField value={row._billName} onChange={setField('_billName')} placeholder="Buyer name" className="pi-strong pi-block" style={{ textAlign: 'right' }} />
+                    <PField as="textarea" rows={2} value={row._billAddress} onChange={setField('_billAddress')} placeholder="Address" className="pi-block" style={{ textAlign: 'right' }} />
+                    <div className="pi-grid3">
+                      <PField value={row._billCity} onChange={setField('_billCity')} placeholder="City" />
+                      <PField value={row._billState} onChange={setField('_billState')} placeholder="State" />
+                      <PField value={row._billPin} onChange={setField('_billPin')} placeholder="PIN" />
+                    </div>
+                    <PField value={row._billGST} onChange={setField('_billGST')} placeholder="GSTIN" style={{ textAlign: 'right', marginTop: 3 }} />
+                  </div>
+                </div>
+
+                {/* ── NEW: Shipping Address — was missing entirely, so
+                   any row._shipName/_shipAddress/etc set outside the UI
+                   (or in the exported template) had no editable home
+                   here and never showed up. ── */}
+                <div className="keshavi-meta" style={{ marginTop: 10 }}>
+                  <div className="keshavi-meta-right" style={{ marginLeft: 'auto' }}>
+                    <div className="inv-addr-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>Shipping Address</span>
+                      <label className="pi-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={!!row._shipSameAsBilling}
+                          onChange={e => dispatch({ type: 'SET_SHIP_SAME', value: e.target.checked })}
+                        />
+                        Same as billing
+                      </label>
+                    </div>
+                    {row._shipSameAsBilling ? (
+                      <div className="inv-addr-body" style={{ opacity: 0.6, textAlign: 'right' }}>
+                        <b>{row._billName || '—'}</b>
+                        <div>{row._billAddress || '—'}</div>
+                        <div>{[row._billCity, row._billState, row._billPin].filter(Boolean).join(', ')}</div>
+                      </div>
+                    ) : (
+                      <>
+                        <PField value={row._shipName} onChange={setField('_shipName')} placeholder="Recipient name" className="pi-strong pi-block" style={{ textAlign: 'right' }} />
+                        <PField as="textarea" rows={2} value={row._shipAddress} onChange={setField('_shipAddress')} placeholder="Address" className="pi-block" style={{ textAlign: 'right' }} />
+                        <div className="pi-grid3">
+                          <PField value={row._shipCity} onChange={setField('_shipCity')} placeholder="City" />
+                          <PField value={row._shipState} onChange={setField('_shipState')} placeholder="State" />
+                          <PField value={row._shipPin} onChange={setField('_shipPin')} placeholder="PIN" />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <hr className="inv-rule" />
               </>
             ) : (
-              /* ═══ DEFAULT / AGASTRON / MODERN HEADER + ADDRESS ═══
-                 Unchanged from before — these three share the same
-                 structural layout in builder.ts (buildInvoiceHTMLThemed),
-                 just recolored, so this generic layout stays correct
-                 for all three. */
+              /* ═══ DEFAULT / AGASTRON / MODERN HEADER + ADDRESS ═══ */
               <>
                 <div className="inv-top">
                   <div className="inv-title-block">
@@ -626,7 +720,7 @@ const seller = useMemo(() => ({
               </>
             )}
 
-            {/* ── Products (shared by every template — only reskinned via .lucidus-skin CSS) ── */}
+            {/* ── Products (shared by every template — only reskinned via CSS) ── */}
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <table className="inv-table pi-table">
                 <thead>
@@ -656,6 +750,11 @@ const seller = useMemo(() => ({
               </table>
             </DndContext>
             <button className="btn btn-primary btn-sm" style={{ marginTop: 4, marginBottom: 18 }} onClick={() => dispatch({ type: 'ADD_PRODUCT' })}>+ Add product</button>
+            {(isItsquad || isKeshavi) && (
+              <div className="note" style={{ marginTop: -10, marginBottom: 18 }}>
+                Batch / Exp. / MRP / per-line discount % (shown on the exported {isItsquad ? 'IT Squad' : 'Keshavi'} invoice) come from the uploaded data — HSN, qty, rate and discount edited here drive the live totals.
+              </div>
+            )}
 
             {/* ── Totals + GST ── */}
             {gst && (
@@ -717,6 +816,7 @@ const seller = useMemo(() => ({
               </div>
             </div>
           </div>
+
         </div>
       </main>
     </div>
@@ -757,6 +857,7 @@ table.inv-table tfoot td { font-weight: 700; }
 .inv-sign { text-align: right; font-size: 9.5px; color: #555; flex-shrink: 0; min-width: 150px; }
 .inv-sign .sig-line { width: 130px; border-bottom: 1.5px solid #333; height: 36px; margin-left: auto; margin-bottom: 5px; }
 .inv-sign .sig-name { font-weight: 700; font-size: 11px; color: #111; }
+.note { font-size: 9.5px; color: #888; font-style: italic; }
 
 .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
@@ -821,7 +922,7 @@ table.inv-table tfoot td { font-weight: 700; }
 
 .pi-select { font-family: inherit; font-size: 10px; border: 1px solid #ddd; border-radius: 4px; padding: 1px 4px; background: #fff; }
 .pi-totals td:first-child { display: flex; align-items: center; }
-.pi-notes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 18px; padding-top: 14px; border-top: 1px dashed #ddd; }
+.pi-notes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 18px; padding-top: 14px; border-top: 1px dashed #ddd; max-width: 820px; margin-left: auto; margin-right: auto; }
 .pi-notes-grid textarea { font-size: 10.5px; border: 1px solid transparent; }
 .pi-notes-grid textarea:hover, .pi-notes-grid textarea:focus { border-color: #dde3f5; }
 
@@ -852,4 +953,43 @@ table.inv-table tfoot td { font-weight: 700; }
 .lucidus-skin table.pi-table tbody tr:nth-child(even) td { background: #EAF3DE; }
 .lucidus-skin .pi-totals .total-final td { border-top-color: #0F6E56; color: #173404; }
 .lucidus-skin .inv-footer { background: #EAF3DE; margin: 28px -48px -40px; padding: 16px 48px; border-top: none; }
+
+/* ── IT Squad skin — bordered monochrome pharmacy "Tax Invoice" box,
+   matching itsquad.ts's exported look. Logo sits in normal block
+   flow above the company name (not absolutely positioned), so it
+   can never visually collapse into the text beneath it — the bug
+   that only affected the PDF export (fixed separately in itsquad.ts)
+   never existed here, and this keeps the live editor consistent. ── */
+.itsquad-skin { border: 1.5px solid #333; padding: 24px 28px; }
+.itsquad-title { text-align: center; font-size: 15px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 12px; }
+.itsquad-top { border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 0; }
+.itsquad-co-block { max-width: 62%; }
+.itsquad-logo { margin-bottom: 6px; }
+.itsquad-coname { font-size: 14px; font-weight: 800; letter-spacing: 0.3px; word-break: break-word; }
+.itsquad-coaddr { font-size: 9.5px; color: #333; margin-top: 3px; line-height: 1.5; }
+.itsquad-billbox { flex-shrink: 0; text-align: right; font-size: 10px; line-height: 1.8; margin-left: 15px; }
+.itsquad-pt { font-size: 10.5px; line-height: 1.7; padding: 4px 0; }
+.itsquad-skin hr.inv-rule { border-top: 1px solid #333; margin: 10px 0; }
+.itsquad-skin table.pi-table th { background: #f2f2f2; border-color: #333; color: #111; }
+.itsquad-skin table.pi-table td { border-color: #333; }
+.itsquad-skin .inv-totals .total-final td { border-top-color: #333; }
+.itsquad-skin .inv-footer { border-top-color: #333; }
+
+/* ── Keshavi skin — thin gray-rule marketplace invoice, matching
+   keshavi.ts's exported look. Same principle: logo is normal block
+   flow above the invoice-number box, never overlapping it. ── */
+.keshavi-skin { border: 1px solid #999; padding: 24px 28px; }
+.keshavi-title { text-align: center; font-size: 15px; font-weight: 800; margin-bottom: 14px; }
+.keshavi-top { align-items: flex-start; }
+.keshavi-soldby { max-width: 62%; font-size: 10.5px; line-height: 1.7; }
+.keshavi-logobox { text-align: right; flex-shrink: 0; }
+.keshavi-invbox { border: 1px solid #999; padding: 5px 10px; font-size: 10px; margin-top: 8px; display: inline-block; }
+.keshavi-meta { display: flex; justify-content: space-between; gap: 16px; font-size: 10.5px; line-height: 1.7; padding: 4px 0; }
+.keshavi-meta-left { min-width: 180px; }
+.keshavi-meta-right { flex: 1; max-width: 280px; }
+.keshavi-skin hr.inv-rule { border-top: 1px solid #999; margin: 10px 0; }
+.keshavi-skin table.pi-table th { background: #f0f0f0; border-color: #999; color: #111; }
+.keshavi-skin table.pi-table td { border-color: #999; }
+.keshavi-skin .inv-totals .total-final td { border-top-color: #999; }
+.keshavi-skin .inv-footer { border-top-color: #999; }
 `;
