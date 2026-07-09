@@ -64,11 +64,11 @@ const rowsHTML = gst.lines.map((item: any, idx: number) => {
   const amount = item.base; // already GST-inclusive
   const unitPrice = item.qty ? amount / item.qty : amount;
   return `<tr>
-    <td style="padding:8px 6px;border:1px solid #999;text-align:center;">${idx + 1}</td>
-    <td style="padding:8px 6px;border:1px solid #999;">${esc(item.description || 'Item')}</td>
-    <td style="padding:8px 6px;border:1px solid #999;text-align:right;">${fmtINR(unitPrice).replace('Rs. ', '')}</td>
-    <td style="padding:8px 6px;border:1px solid #999;text-align:center;">${item.qty}</td>
-    <td style="padding:8px 6px;border:1px solid #999;text-align:right;font-weight:700;">${fmtINR(amount).replace('Rs. ', '')}</td>
+    <td style="padding:8px 6px;text-align:center;">${idx + 1}</td>
+    <td style="padding:8px 6px;">${esc(item.description || 'Item')}</td>
+    <td style="padding:8px 6px;text-align:right;">${fmtINR(unitPrice).replace('Rs. ', '')}</td>
+    <td style="padding:8px 6px;text-align:center;">${item.qty}</td>
+    <td style="padding:8px 6px;text-align:right;font-weight:700;">${fmtINR(amount).replace('Rs. ', '')}</td>
   </tr>`;
 }).join('');
 
@@ -109,18 +109,18 @@ const rowsHTML = gst.lines.map((item: any, idx: number) => {
   </div>
 
 <table style="width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:14px;">
-  <thead><tr style="background:#f0f0f0;">
-    <th style="padding:8px 6px;border:1px solid #999;width:50px;">Sl. No</th>
-    <th style="padding:8px 6px;border:1px solid #999;text-align:left;">Description</th>
-    <th style="padding:8px 6px;border:1px solid #999;">Unit Price</th>
-    <th style="padding:8px 6px;border:1px solid #999;">QTY</th>
-    <th style="padding:8px 6px;border:1px solid #999;">Amount</th>
+  <thead><tr style="background:#f0f0f0;border-bottom:1px solid #999;">
+    <th style="padding:8px 6px;width:50px;">Sl. No</th>
+    <th style="padding:8px 6px;text-align:left;">Description</th>
+    <th style="padding:8px 6px;">Unit Price</th>
+    <th style="padding:8px 6px;">QTY</th>
+    <th style="padding:8px 6px;">Amount</th>
   </tr></thead>
   <tbody>${rowsHTML}</tbody>
   <tfoot>
-    <tr style="background:#f7f7f7;font-weight:700;">
-      <td colSpan="4" style="padding:8px 6px;border:1px solid #999;text-align:right;">TOTAL:</td>
-      <td style="padding:8px 6px;border:1px solid #999;text-align:right;">${fmtINR(gst.total).replace('Rs. ', '')}</td>
+    <tr style="background:#f7f7f7;font-weight:700;border-top:1px solid #999;">
+      <td colSpan="4" style="padding:8px 6px;text-align:right;">TOTAL:</td>
+      <td style="padding:8px 6px;text-align:right;">${fmtINR(gst.total).replace('Rs. ', '')}</td>
     </tr>
   </tfoot>
 </table>
@@ -280,9 +280,30 @@ autoTable(doc, {
   head, body: bodyRows,
   foot: [['', '', '', 'TOTAL:', fmtNum(gst.total)]],
   margin: { left: L, right: 14 },
-  styles: { fontSize: 8, cellPadding: 4, textColor: 20, lineColor: [150, 150, 150], lineWidth: 0.2, overflow: 'linebreak' },
-  headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold', lineColor: [150, 150, 150] },
-  footStyles: { fillColor: [247, 247, 247], textColor: 0, fontStyle: 'bold', lineColor: [150, 150, 150] },
+  styles: {
+    fontSize: 8,
+    cellPadding: 4,
+    textColor: 20,
+    lineWidth: 0, // no borders anywhere by default
+    overflow: 'linebreak',
+  },
+  headStyles: {
+    fillColor: [240, 240, 240],
+    textColor: 0,
+    fontStyle: 'bold',
+    lineColor: [150, 150, 150],
+    lineWidth: { top: 0, left: 0, right: 0, bottom: 0.3 }, // only bottom line under header
+  },
+  footStyles: {
+    fillColor: [247, 247, 247],
+    textColor: 0,
+    fontStyle: 'bold',
+    lineColor: [150, 150, 150],
+    lineWidth: { top: 0.3, left: 0, right: 0, bottom: 0 }, // only top line above TOTAL
+  },
+  bodyStyles: {
+    lineWidth: 0, // item rows fully borderless
+  },
   columnStyles: { 0: { halign: 'center' }, 1: { halign: 'left' } },
   didParseCell: function (data: any) { if (data.column.index > 1) data.cell.styles.halign = 'right'; },
 });

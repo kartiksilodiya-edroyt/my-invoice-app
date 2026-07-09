@@ -57,23 +57,18 @@ export function buildInvoiceHTMLItsquad(row: any, profile: any, invNum: string, 
         : '';
 
     // ---- Item rows: Qty | Product | HSN | Model No | Warranty | MRP | Gross | Dis% | GST% | Amount
-    const rowsHTML = gst.lines.map((item: any) => {
-        const lineTax = item.base * gst.rate / 100;
-        const gross = item.base + lineTax;
-        const disPct = item.disPercent != null ? cleanNum(item.disPercent).toFixed(2) : '0.00';
-        return `<tr>
-      <td style="padding:4px 5px;border:1px solid #333;text-align:center;">${item.qty}</td>
-      <td style="padding:4px 5px;border:1px solid #333;">${esc(item.description || 'Item')}</td>
-      <td style="padding:4px 5px;border:1px solid #333;text-align:center;">${esc(item.hsn || '-')}</td>
-      <td style="padding:4px 5px;border:1px solid #333;text-align:center;">${esc(item.model || item.batch || '-')}</td>
-      <td style="padding:4px 5px;border:1px solid #333;text-align:center;">${esc(item.warranty || item.exp || '-')}</td>
-      <td style="padding:4px 5px;border:1px solid #333;text-align:right;">${fmtINR(item.mrp != null ? item.mrp : item.base).replace('Rs. ', '')}</td>
-      <td style="padding:4px 5px;border:1px solid #333;text-align:right;">${fmtINR(gross).replace('Rs. ', '')}</td>
-      <td style="padding:4px 5px;border:1px solid #333;text-align:right;">${disPct}</td>
-      <td style="padding:4px 5px;border:1px solid #333;text-align:right;">${cleanNum(gst.rate).toFixed(2)}</td>
-      <td style="padding:4px 5px;border:1px solid #333;text-align:right;font-weight:700;">${fmtINR(gross).replace('Rs. ', '')}</td>
-    </tr>`;
-    }).join('');
+const rowsHTML = gst.lines.map((item: any, idx: number) => {
+    const lineTax = item.base * gst.rate / 100;
+    const amount = item.base + lineTax;
+    const unitPrice = item.qty ? amount / item.qty : amount;
+    return `<tr>
+    <td style="padding:8px 6px;text-align:center;">${idx + 1}</td>
+    <td style="padding:8px 6px;">${esc(item.description || 'Item')}</td>
+    <td style="padding:8px 6px;text-align:right;">${fmtINR(unitPrice).replace('Rs. ', '')}</td>
+    <td style="padding:8px 6px;text-align:center;">${item.qty}</td>
+    <td style="padding:8px 6px;text-align:right;font-weight:700;">${fmtINR(amount).replace('Rs. ', '')}</td>
+  </tr>`;
+}).join('');
 
     const subTotal = gst.lines.reduce((s: number, l: any) => s + l.base, 0);
     const gstAmount = gst.total - subTotal;
@@ -119,23 +114,22 @@ line-height:1.35;
     </div>
   </div>
 
-  <table style="width:100%;border-collapse:collapse;font-size:7.5pt;">
-    <thead>
-      <tr style="background:#f2f2f2;font-weight:bold;">
-        <th style="padding:4px 5px;border:1px solid #333;">Qty</th>
-        <th style="padding:4px 5px;border:1px solid #333;text-align:left;">Product Name</th>
-        <th style="padding:4px 5px;border:1px solid #333;">Hsn</th>
-        <th style="padding:4px 5px;border:1px solid #333;">Model No.</th>
-        <th style="padding:4px 5px;border:1px solid #333;">Warranty</th>
-        <th style="padding:4px 5px;border:1px solid #333;">MRP</th>
-        <th style="padding:4px 5px;border:1px solid #333;">Gross Amt</th>
-        <th style="padding:4px 5px;border:1px solid #333;">Dis%</th>
-        <th style="padding:4px 5px;border:1px solid #333;">Gst%</th>
-        <th style="padding:4px 5px;border:1px solid #333;">Amount</th>
-      </tr>
-    </thead>
-    <tbody>${rowsHTML}</tbody>
-  </table>
+<table style="width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:14px;">
+  <thead><tr style="background:#f2f2f2;font-weight:bold;border-bottom:1px solid #333;">
+    <th style="padding:8px 6px;width:50px;">Sl. No</th>
+    <th style="padding:8px 6px;text-align:left;">Description</th>
+    <th style="padding:8px 6px;">Unit Price</th>
+    <th style="padding:8px 6px;">QTY</th>
+    <th style="padding:8px 6px;">Amount</th>
+  </tr></thead>
+  <tbody>${rowsHTML}</tbody>
+  <tfoot>
+    <tr style="background:#f7f7f7;font-weight:700;border-top:1px solid #333;">
+      <td colSpan="4" style="padding:8px 6px;text-align:right;">TOTAL:</td>
+      <td style="padding:8px 6px;text-align:right;">${fmtINR(gst.total).replace('Rs. ', '')}</td>
+    </tr>
+  </tfoot>
+</table>
 
   <div style="display:flex;justify-content:flex-end;margin-top:8px;">
     <div style="width:220px;font-size:8pt;line-height:1.7;">
@@ -272,36 +266,45 @@ export async function buildPDFItsquad(row: any, profile: any, invNum: string, co
     doc.line(L, y, R, y);
     y += 4;
 
-    // Item table — Batch/Exp swapped for Model No./Warranty
-    const head = [['Qty', 'Product Name', 'Hsn', 'Model No.', 'Warranty', 'MRP', 'Gross Amt', 'Dis%', 'Gst%', 'Amount']];
-    const bodyRows = gst.lines.map((l: any) => {
-        const lineTax = l.base * gst.rate / 100;
-        const gross = l.base + lineTax;
-        const disPct = l.disPercent != null ? cleanNum(l.disPercent).toFixed(2) : '0.00';
-        return [
-            String(l.qty ?? ''),
-            l.description || 'Item',
-            l.hsn || '-',
-            l.model || l.batch || '-',
-            l.warranty || l.exp || '-',
-            fmtNum(l.mrp != null ? l.mrp : l.base),
-            fmtNum(gross),
-            disPct,
-            cleanNum(gst.rate).toFixed(2),
-            fmtNum(gross),
-        ];
-    });
+const head = [['Sl. No', 'Description', 'Unit Price', 'QTY', 'Amount']];
+const bodyRows = gst.lines.map((l: any, idx: number) => {
+    const lineTax = l.base * gst.rate / 100;
+    const amount = l.base + lineTax;
+    const unitPrice = l.qty ? amount / l.qty : amount;
+    return [String(idx + 1), l.description || 'Item', fmtNum(unitPrice), String(l.qty), fmtNum(amount)];
+});
 
-    autoTable(doc, {
-        startY: y,
-        head, body: bodyRows,
-        margin: { left: L, right: 12 },
-        styles: { fontSize: 6.8, cellPadding: 1.6, textColor: 20, lineColor: [50, 50, 50], lineWidth: 0.2, overflow: 'linebreak' },
-        headStyles: { fillColor: [242, 242, 242], textColor: 0, fontStyle: 'bold', lineColor: [50, 50, 50] },
-        columnStyles: { 1: { halign: 'left' } },
-        didParseCell: function (data: any) { if (data.column.index !== 1) data.cell.styles.halign = 'right'; if (data.column.index === 0) data.cell.styles.halign = 'center'; },
-    });
-    y = (doc as any).lastAutoTable.finalY + 6;
+autoTable(doc, {
+    startY: y,
+    head, body: bodyRows,
+    foot: [['', '', '', 'TOTAL:', fmtNum(gst.total)]],
+    margin: { left: L, right: 12 },
+    styles: {
+      fontSize: 8,
+      cellPadding: 4,
+      textColor: 20,
+      lineWidth: 0,
+      overflow: 'linebreak',
+    },
+    headStyles: {
+      fillColor: [242, 242, 242],
+      textColor: 0,
+      fontStyle: 'bold',
+      lineColor: [50, 50, 50],
+      lineWidth: { top: 0, left: 0, right: 0, bottom: 0.3 },
+    },
+    footStyles: {
+      fillColor: [247, 247, 247],
+      textColor: 0,
+      fontStyle: 'bold',
+      lineColor: [50, 50, 50],
+      lineWidth: { top: 0.3, left: 0, right: 0, bottom: 0 },
+    },
+    bodyStyles: { lineWidth: 0 },
+    columnStyles: { 0: { halign: 'center' }, 1: { halign: 'left' } },
+    didParseCell: function (data: any) { if (data.column.index > 1) data.cell.styles.halign = 'right'; },
+});
+y = (doc as any).lastAutoTable.finalY + 8;
 
     const subTotal = gst.lines.reduce((s: number, l: any) => s + l.base, 0);
     const gstAmount = gst.total - subTotal;
