@@ -278,8 +278,14 @@ export async function buildPDFLucidus(row: any, profile: any, invNum: string, co
   y = drawTotalsPDF(doc, gst, y, R) + 5;
 
   doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5);
-  const wl = doc.splitTextToSize(words, R - (R - 50) + 40);
-  doc.text(wl, R - 50, y); y += wl.length * 4.5 + 8;
+  const wl = doc.splitTextToSize(`Amount in Words: ${words}`, W - 8);
+  const wordsBoxH = wl.length * 4.2 + 6;
+  doc.setFillColor(249, 249, 249);
+  doc.setDrawColor(221, 221, 221);
+  doc.setLineWidth(0.3);
+  doc.rect(L, y, W, wordsBoxH, 'FD');
+  doc.text(wl, L + 4, y + 5.5);
+  y += wordsBoxH + 8;
 
   // ── Signature ──
   const ph = doc.internal.pageSize.height;
