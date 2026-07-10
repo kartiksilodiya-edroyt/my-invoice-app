@@ -115,7 +115,7 @@ line-height:1.35;
     <th style="padding:8px 6px;width:50px;">Sl. No</th>
     <th style="padding:8px 6px;text-align:left;">Description</th>
     <th style="padding:8px 6px;">Unit Price</th>
-    <th style="padding:8px 6px;">QTY</th>
+    <th style="padding:8px 6px;text-align:center;">QTY</th>
     <th style="padding:8px 6px;">Amount</th>
   </tr></thead>
   <tbody>${rowsHTML}</tbody>
