@@ -69,9 +69,6 @@ const rowsHTML = gst.lines.map((item: any, idx: number) => {
   </tr>`;
 }).join('');
 
-    const subTotal = gst.base;
-    const gstAmount = gst.isSame ? (gst.cgst + gst.sgst) : gst.igst;
-
     return `<div style="
 background:#fff;
 color:#111;
@@ -131,11 +128,15 @@ line-height:1.35;
 </table>
 
   <div style="display:flex;justify-content:flex-end;margin-top:8px;">
-    <div style="width:220px;font-size:8pt;line-height:1.7;">
-      <div style="display:flex;justify-content:space-between;"><span>SUB TOTAL</span><span>${fmtINR(subTotal).replace('Rs. ', '')}</span></div>
-      <div style="display:flex;justify-content:space-between;"><span>GST</span><span>${fmtINR(gstAmount).replace('Rs. ', '')}</span></div>
-      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:9pt;border-top:1px solid #333;margin-top:3px;padding-top:3px;">
-        <span>INVOICE TOTAL</span><span>${fmtINR(gst.total).replace('Rs. ', '')}</span>
+    <div style="width:260px;font-size:8pt;line-height:1.7;">
+      <div style="display:flex;justify-content:space-between;"><span>Base Amount</span><span>${fmtINR(gst.base)}</span></div>
+      ${gst.isSame
+        ? `<div style="display:flex;justify-content:space-between;"><span>CGST @ ${gst.rate / 2}%</span><span>${fmtINR(gst.cgst)}</span></div>
+           <div style="display:flex;justify-content:space-between;"><span>SGST @ ${gst.rate / 2}%</span><span>${fmtINR(gst.sgst)}</span></div>`
+        : `<div style="display:flex;justify-content:space-between;"><span>IGST @ ${gst.rate}%</span><span>${fmtINR(gst.igst)}</span></div>`
+      }
+      <div style="display:flex;justify-content:space-between;font-weight:800;font-size:10.5px;border-top:2px solid #111;margin-top:3px;padding-top:4px;">
+        <span>Total</span><span>${fmtINR(gst.total)}</span>
       </div>
     </div>
   </div>
@@ -304,16 +305,18 @@ autoTable(doc, {
 });
 y = (doc as any).lastAutoTable.finalY + 8;
 
-    const subTotal = gst.base;
-    const gstAmount = gst.isSame ? (gst.cgst + gst.sgst) : gst.igst;
-
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
-    T(`SUB TOTAL   ${fmtNum(subTotal)}`, R, y, { align: 'right' }); y += 4.5;
-    T(`GST   ${fmtNum(gstAmount)}`, R, y, { align: 'right' }); y += 4.5;
-    doc.setDrawColor(50, 50, 50);
+    T(`Base Amount   ${fmtNum(gst.base)}`, R, y, { align: 'right' }); y += 4.5;
+    if (gst.isSame) {
+      T(`CGST @ ${gst.rate / 2}%   ${fmtNum(gst.cgst)}`, R, y, { align: 'right' }); y += 4.5;
+      T(`SGST @ ${gst.rate / 2}%   ${fmtNum(gst.sgst)}`, R, y, { align: 'right' }); y += 4.5;
+    } else {
+      T(`IGST @ ${gst.rate}%   ${fmtNum(gst.igst)}`, R, y, { align: 'right' }); y += 4.5;
+    }
+    doc.setDrawColor(20, 20, 20); doc.setLineWidth(0.4);
     doc.line(R - 55, y, R, y); y += 4.5;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
-    T(`INVOICE TOTAL   ${fmtNum(gst.total)}`, R, y, { align: 'right' });
+    T(`Total   Rs. ${fmtNum(gst.total)}`, R, y, { align: 'right' });
     y += 8;
 
     doc.setDrawColor(50, 50, 50);
@@ -347,8 +350,7 @@ export async function buildDOCXItsquad(row: any, profile: any, invNum: string, c
 
     const divider = wTableTheme(wTRTheme([''], [PAGE_W], { size: 2 }), PAGE_W);
 
-    const subTotal = gst.lines.reduce((s: number, l: any) => s + l.base, 0);
-    const gstAmount = gst.total - subTotal;
+    const subTotal = gst.base;
 
     let body = '';
     body += wPTheme('TAX INVOICE', { bold: true, size: 14, align: 'center' });
@@ -397,8 +399,7 @@ export async function buildDOCXItsquad(row: any, profile: any, invNum: string, c
     body += wTableTheme(
         wTRTheme(cols, colWidths, { bold: true, size: 7, align: 'center' }) +
         gst.lines.map((l: any) => {
-            const lineTax = l.base * gst.rate / 100;
-            const gross = l.base + lineTax;
+            const gross = l.base; // already GST-inclusive — do NOT add tax again
             const disPct = l.disPercent != null ? cleanNum(l.disPercent).toFixed(2) : '0.00';
             return wTRTheme(
                 [
@@ -422,9 +423,14 @@ export async function buildDOCXItsquad(row: any, profile: any, invNum: string, c
     body += divider;
     body += wPTheme('');
 
-    body += wPTheme(`SUB TOTAL: ${fmtINR(subTotal)}`, { size: 8, align: 'right' });
-    body += wPTheme(`GST: ${fmtINR(gstAmount)}`, { size: 8, align: 'right' });
-    body += wPTheme(`INVOICE TOTAL: ${fmtINR(gst.total)}`, { bold: true, size: 11, align: 'right' });
+    body += wPTheme(`Base Amount: ${fmtINR(gst.base)}`, { size: 8, align: 'right' });
+    if (gst.isSame) {
+      body += wPTheme(`CGST @ ${gst.rate / 2}%: ${fmtINR(gst.cgst)}`, { size: 8, align: 'right' });
+      body += wPTheme(`SGST @ ${gst.rate / 2}%: ${fmtINR(gst.sgst)}`, { size: 8, align: 'right' });
+    } else {
+      body += wPTheme(`IGST @ ${gst.rate}%: ${fmtINR(gst.igst)}`, { size: 8, align: 'right' });
+    }
+    body += wPTheme(`Total: ${fmtINR(gst.total)}`, { bold: true, size: 11, align: 'right' });
     body += wPTheme('');
     body += divider;
     body += wPTheme('');
