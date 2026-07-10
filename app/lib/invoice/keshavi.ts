@@ -331,21 +331,22 @@ y += 9;
 doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5);
 const wl = doc.splitTextToSize(`Amount in Words: ${words || ''}`, W - 8);
 const boxH = wl.length * 4.2 + 6;
-doc.setFillColor(249, 249, 249);
-doc.setDrawColor(221, 221, 221);
-doc.setLineWidth(0.2);
-doc.roundedRect(L, y, W, boxH, 1, 1, 'FD');
+
+doc.setFillColor(247, 247, 247);   // slightly darker fill
+doc.setDrawColor(150, 150, 150);   // visible mid-grey border
+doc.setLineWidth(0.3);             // thick enough to render
+doc.rect(L, y, W, boxH, 'FD');     // plain rect — more reliable than roundedRect
 T(wl, L + 4, y + 5.5);
 y += boxH + 8;
 
 doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+doc.setTextColor(0, 0, 0);
 T(`From ${f.coName}`, L, y);
 y += 10;
 
-
   // Footer / signature block — cleaner fixed spacing
-  doc.setDrawColor(50, 50, 50); doc.setLineWidth(0.3);
-  doc.line(R - 55, y, R, y);
+  doc.setDrawColor(30, 30, 30); doc.setLineWidth(0.4);
+doc.line(R - 55, y, R, y);
   y += 5;
   doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
   T(`For ${f.coName}`, R, y, { align: 'right' });
