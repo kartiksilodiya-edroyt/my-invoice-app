@@ -35,7 +35,7 @@ import {
   esc, cleanNum, fmtINR, numWords, parseDate, wrapAddressLines,
   pickAddressBlock, getProfileLogo, getLogoSrc, urlToDataURL,
 } from './utils';
-import { wPTheme, wTRTheme, wTableTheme } from './builder';
+import { wPTheme, wTRTheme, wTableTheme, buildItemsTableHTML, buildTotalsHTML, drawItemsTablePDF, drawTotalsPDF, buildItemsTableDOCX } from './builder';
 
 // Pure black / white / gray — no fills, only ink text and thin rule lines.
 const INK_HEX = '#1A1A1A';                              // primary text, headings, rule lines
@@ -134,28 +134,10 @@ export function buildInvoiceHTMLLucidus(row: any, profile: any, invNum: string, 
     </div>
 
 
-    <table style="width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:22px;">
-      <colgroup><col/><col style="width:70px;"/><col style="width:48px;"/><col style="width:82px;"/><col style="width:96px;"/></colgroup>
-      <thead><tr style="border-top:1.5px solid ${INK_HEX};border-bottom:1.5px solid ${INK_HEX};">
-        <th style="text-align:left;color:${INK_HEX};font-size:11px;font-weight:700;padding:10px 10px;">Item</th>
-        <th style="text-align:left;color:${INK_HEX};font-size:11px;font-weight:700;padding:10px 6px;">HSN</th>
-        <th style="text-align:right;color:${INK_HEX};font-size:11px;font-weight:700;padding:10px 6px;">Qty</th>
-        <th style="text-align:right;color:${INK_HEX};font-size:11px;font-weight:700;padding:10px 6px;">Rate</th>
-        <th style="text-align:right;color:${INK_HEX};font-size:11px;font-weight:700;padding:10px 10px;">Amount</th>
-      </tr></thead>
-      <tbody>${rowsHTML}</tbody>
-    </table>
+    ${buildItemsTableHTML(gst)}
 
-    <div style="display:flex;justify-content:flex-end;">
-      <div style="width:290px;">
-        ${totalsRows}
-        <div style="border-top:2px solid ${INK_HEX};padding:10px 0 0;margin-top:6px;display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:13px;font-weight:700;color:${INK_HEX};">Total</span>
-          <span style="font-size:16px;font-weight:700;color:${INK_HEX};">${fmtINR(gst.total)}</span>
-        </div>
-        <div style="font-size:10.5px;color:#888;margin-top:10px;font-style:italic;">${esc(words)}</div>
-      </div>
-    </div>
+    ${buildTotalsHTML(gst)}
+    <div style="font-size:10.5px;color:#888;margin-top:10px;font-style:italic;text-align:right;">${esc(words)}</div>
 
     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:48px;">
       <div style="font-size:10px;color:#888;">This is a computer-generated invoice.</div>
@@ -291,52 +273,13 @@ export async function buildPDFLucidus(row: any, profile: any, invNum: string, co
 
 
   // ── Product table (ruled, no fill) ──
-  const colAligns = ['left', 'left', 'right', 'right', 'right'];
-  autoTable(doc, {
-    startY: y,
-    theme: 'plain',
-    head: [['Item', 'HSN', 'Qty', 'Rate', 'Amount']],
-    body: gst.lines.map((l: any, idx: number) => [
-      l.description || 'Item', products[idx]?.hsn || '', String(l.qty), formatNumOnly(l.unitPrice), formatNumOnly(l.base),
-    ]),
-    margin: { left: L, right: 14 },
-    styles: { fontSize: 8.5, overflow: 'linebreak', cellPadding: 5, textColor: 30, valign: 'middle' },
-    headStyles: {
-      textColor: INK_RGB, fontStyle: 'bold', fillColor: false,
-      lineColor: INK_RGB, lineWidth: { top: 0.6, bottom: 0.6 },
-    },
-    bodyStyles: {
-      lineColor: ROW_BORDER_RGB, lineWidth: { bottom: 0.2 },
-    },
-    columnStyles: { 0: { cellWidth: 76 }, 1: { cellWidth: 24 }, 2: { cellWidth: 20 }, 3: { cellWidth: 28 }, 4: { cellWidth: 34 } },
-    didParseCell: function (data: any) { data.cell.styles.halign = colAligns[data.column.index]; },
-  });
-  y = (doc as any).lastAutoTable.finalY + 12;
+  y = drawItemsTablePDF(doc, gst, y, L, R) + 12;
 
-  // ── Totals block (ruled, no fill) ──
-  const boxX = R - 74, boxW = 74;
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-  if (gst.isSame) {
-    doc.text('Base amount', boxX, y); doc.text(fmtINRPdf(gst.base), R, y, { align: 'right' }); y += 6;
-    doc.text(`CGST @ ${gst.rate / 2}%`, boxX, y); doc.text(fmtINRPdf(gst.cgst), R, y, { align: 'right' }); y += 6;
-    doc.text(`SGST @ ${gst.rate / 2}%`, boxX, y); doc.text(fmtINRPdf(gst.sgst), R, y, { align: 'right' }); y += 6;
-  } else {
-    doc.text('Base amount', boxX, y); doc.text(fmtINRPdf(gst.base), R, y, { align: 'right' }); y += 6;
-    doc.text(`IGST @ ${gst.rate}%`, boxX, y); doc.text(fmtINRPdf(gst.igst), R, y, { align: 'right' }); y += 6;
-  }
-  y += 3;
-  doc.setDrawColor(INK_RGB[0], INK_RGB[1], INK_RGB[2]); doc.setLineWidth(0.7);
-  doc.line(boxX, y, boxX + boxW, y);
-  y += 7;
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
-  doc.setTextColor(INK_RGB[0], INK_RGB[1], INK_RGB[2]);
-  doc.text('Total', boxX, y); doc.text(fmtINRPdf(gst.total), R, y, { align: 'right' });
-  doc.setTextColor(0, 0, 0);
-  y += 12;
+  y = drawTotalsPDF(doc, gst, y, R) + 5;
 
   doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5);
-  const wl = doc.splitTextToSize(words, W - 4);
-  doc.text(wl, boxX, y); y += wl.length * 4.5 + 8;
+  const wl = doc.splitTextToSize(words, R - (R - 50) + 40);
+  doc.text(wl, R - 50, y); y += wl.length * 4.5 + 8;
 
   // ── Signature ──
   const ph = doc.internal.pageSize.height;
@@ -412,14 +355,7 @@ export async function buildDOCXLucidus(row: any, profile: any, invNum: string, c
   );
   body += wPTheme('');
 
-  body += wTableTheme(
-    wTRTheme(['Item', 'HSN', 'Qty', 'Rate', 'Amount'], itemWidths, { bold: true, size: 8, align: 'center' }) +
-    gst.lines.map((l: any, idx: number) => wTRTheme(
-      [l.description || 'Item', products[idx]?.hsn || '', String(l.qty), fmtINR(l.unitPrice), fmtINR(l.base)],
-      itemWidths, { size: 8, align: 'center' }
-    )).join(''),
-    PAGE_W
-  );
+  body += buildItemsTableDOCX(gst);
   body += wPTheme('');
 
   body += wPTheme(`Base amount: ${fmtINR(gst.base)}`, { size: 9, align: 'right' });

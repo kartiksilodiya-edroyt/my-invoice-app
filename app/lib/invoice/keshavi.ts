@@ -6,7 +6,7 @@ import {
   esc, cleanNum, fmtINR, numWords, parseDate,
   pickAddressBlock, getProfileLogo, getLogoSrc, urlToDataURL,
 } from './utils';
-import { wPTheme, wTRTheme, wTableTheme } from './builder';
+import { wPTheme, wTRTheme, wTableTheme, buildItemsTableHTML, buildTotalsHTML, drawItemsTablePDF, drawTotalsPDF, buildItemsTableDOCX } from './builder';
 
 function extractFields(row: any, profile: any, company: any) {
   const co = company || {};
@@ -60,17 +60,8 @@ export function buildInvoiceHTMLKeshavi(row: any, profile: any, invNum: string, 
 
   const taxHead = gst.isSame ? `<th>SGST ₹</th><th>CGST ₹</th>` : `<th>IGST ₹</th>`;
 
-const rowsHTML = gst.lines.map((item: any, idx: number) => {
-  const amount = item.base; // already GST-inclusive
-  const unitPrice = item.qty ? amount / item.qty : amount;
-  return `<tr>
-    <td style="padding:8px 6px;text-align:center;">${idx + 1}</td>
-    <td style="padding:8px 6px;">${esc(item.description || 'Item')}</td>
-    <td style="padding:8px 6px;text-align:right;">${fmtINR(unitPrice).replace('Rs. ', '')}</td>
-    <td style="padding:8px 6px;text-align:center;">${item.qty}</td>
-    <td style="padding:8px 6px;text-align:right;font-weight:700;">${fmtINR(amount).replace('Rs. ', '')}</td>
-  </tr>`;
-}).join('');
+  const itemsTableHTML = buildItemsTableHTML(gst);
+const totalsHTML = buildTotalsHTML(gst);
 
   return `<div style="background:#ffffff;color:#111;border:1px solid #999;font-family:'Helvetica Neue',Arial,sans-serif;padding:24px 28px;">
   <div style="text-align:center;font-size:15px;font-weight:800;margin-bottom:14px;">Tax Invoice</div>
@@ -108,34 +99,9 @@ const rowsHTML = gst.lines.map((item: any, idx: number) => {
     </div>
   </div>
 
-<table style="width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:14px;">
-  <thead><tr style="background:#f0f0f0;border-bottom:1px solid #999;">
-    <th style="padding:8px 6px;width:50px;">Sl. No</th>
-    <th style="padding:8px 6px;text-align:left;">Description</th>
-    <th style="padding:8px 6px;">Unit Price</th>
-    <th style="padding:8px 6px;">QTY</th>
-    <th style="padding:8px 6px;">Amount</th>
-  </tr></thead>
-  <tbody>${rowsHTML}</tbody>
-  <tfoot>
-    <tr style="background:#f7f7f7;font-weight:700;border-top:1px solid #999;">
-      <td colSpan="4" style="padding:8px 6px;text-align:right;">TOTAL:</td>
-      <td style="padding:8px 6px;text-align:right;">${fmtINR(gst.total).replace('Rs. ', '')}</td>
-    </tr>
-  </tfoot>
-</table>
+${itemsTableHTML}
 
-<table style="margin-left:auto;width:260px;border-collapse:collapse;font-size:10.5px;margin-bottom:14px;">
-  <tbody>
-    <tr><td style="padding:5px 8px;">Base Amount</td><td style="padding:5px 8px;text-align:right;">${fmtINR(gst.base)}</td></tr>
-    ${gst.isSame
-      ? `<tr><td style="padding:5px 8px;">CGST @ ${gst.rate / 2}%</td><td style="padding:5px 8px;text-align:right;">${fmtINR(gst.cgst)}</td></tr>
-         <tr><td style="padding:5px 8px;">SGST @ ${gst.rate / 2}%</td><td style="padding:5px 8px;text-align:right;">${fmtINR(gst.sgst)}</td></tr>`
-      : `<tr><td style="padding:5px 8px;">IGST @ ${gst.rate}%</td><td style="padding:5px 8px;text-align:right;">${fmtINR(gst.igst)}</td></tr>`
-    }
-    <tr style="border-top:2px solid #111;"><td style="padding:6px 8px;font-weight:800;font-size:12px;">Total</td><td style="padding:6px 8px;text-align:right;font-weight:800;font-size:12px;">${fmtINR(gst.total)}</td></tr>
-  </tbody>
-</table>
+${totalsHTML}
 
 <div style="font-size:10px;background:#f9f9f9;border:1px solid #ddd;padding:8px 12px;border-radius:4px;margin-bottom:8px;">Amount in Words: ${esc(words)}</div>
 <div style="font-size:11px;font-weight:800;color:#111;margin-bottom:20px;">From ${esc(f.coName)}</div>
@@ -267,64 +233,9 @@ export async function buildPDFKeshavi(row: any, profile: any, invNum: string, co
 
   y = Math.max(y, by) + 3;
 
-const head = [['Sl. No', 'Description', 'Unit Price', 'QTY', 'Amount']];
+y = drawItemsTablePDF(doc, gst, y, L, R) + 8;
 
-const bodyRows = gst.lines.map((l: any, idx: number) => {
-  const amount = l.base; // already GST-inclusive — do NOT add tax again
-  const unitPrice = l.qty ? amount / l.qty : amount;
-  return [String(idx + 1), l.description || 'Item', fmtNum(unitPrice), String(l.qty), fmtNum(amount)];
-});
-
-autoTable(doc, {
-  startY: y,
-  head, body: bodyRows,
-  foot: [['', '', '', 'TOTAL:', fmtNum(gst.total)]],
-  margin: { left: L, right: 14 },
-  styles: {
-    fontSize: 8,
-    cellPadding: 4,
-    textColor: 20,
-    lineWidth: 0, // no borders anywhere by default
-    overflow: 'linebreak',
-  },
-  headStyles: {
-    fillColor: [240, 240, 240],
-    textColor: 0,
-    fontStyle: 'bold',
-    lineColor: [150, 150, 150],
-    lineWidth: { top: 0, left: 0, right: 0, bottom: 0.3 }, // only bottom line under header
-  },
-  footStyles: {
-    fillColor: [247, 247, 247],
-    textColor: 0,
-    fontStyle: 'bold',
-    lineColor: [150, 150, 150],
-    lineWidth: { top: 0.3, left: 0, right: 0, bottom: 0 }, // only top line above TOTAL
-  },
-  bodyStyles: {
-    lineWidth: 0, // item rows fully borderless
-  },
-  columnStyles: { 0: { halign: 'center' }, 1: { halign: 'left' } },
-  didParseCell: function (data: any) { if (data.column.index > 1) data.cell.styles.halign = 'right'; },
-});
-y = (doc as any).lastAutoTable.finalY + 8;
-
-// Base / GST / Total summary block, right-aligned
-const boxW = 70, boxR = R, boxL = R - boxW;
-doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-T('Base Amount', boxL, y); T(fmtNum(gst.base), boxR, y, { align: 'right' }); y += 5;
-if (gst.isSame) {
-  T(`CGST @ ${gst.rate / 2}%`, boxL, y); T(fmtNum(gst.cgst), boxR, y, { align: 'right' }); y += 5;
-  T(`SGST @ ${gst.rate / 2}%`, boxL, y); T(fmtNum(gst.sgst), boxR, y, { align: 'right' }); y += 5;
-} else {
-  T(`IGST @ ${gst.rate}%`, boxL, y); T(fmtNum(gst.igst), boxR, y, { align: 'right' }); y += 5;
-}
-doc.setDrawColor(20, 20, 20); doc.setLineWidth(0.4);
-doc.line(boxL, y, boxR, y);
-y += 5;
-doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
-T('Total', boxL, y); T(`Rs. ${fmtNum(gst.total)}`, boxR, y, { align: 'right' });
-y += 9;
+y = drawTotalsPDF(doc, gst, y, R) + 2;
 
 
 doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5);
@@ -362,10 +273,7 @@ export async function buildDOCXKeshavi(row: any, profile: any, invNum: string, c
   const words = numWords(gst.total);
 
   const PAGE_W = 9360;
-  const taxCols = gst.isSame
-    ? ['Description', 'Qty', 'SGST', 'CGST', 'Total']
-    : ['Description', 'Qty','IGST', 'Total'];
-  const colWidths = gst.isSame ? [3120, 1040, 1560, 1160, 1160, 1320] : [3600, 1200, 1800, 1360, 1400];
+  
 
   const shipFromLines = splitAddrLines(f.coAddr, 2);
 
@@ -393,20 +301,7 @@ export async function buildDOCXKeshavi(row: any, profile: any, invNum: string, c
   );
   body += wPTheme('');
 
-  body += wTableTheme(
-    wTRTheme(taxCols, colWidths, { bold: true, size: 8, align: 'center' }) +
-    gst.lines.map((l: any) => {
-      const lineTax = l.base * gst.rate / 100;
-      const half = lineTax / 2;
-      return wTRTheme(
-        gst.isSame
-          ? [l.description || 'Item', String(l.qty), fmtINR(l.base), fmtINR(half), fmtINR(half), fmtINR(l.base + lineTax)]
-          : [l.description || 'Item', String(l.qty), fmtINR(l.base), fmtINR(lineTax), fmtINR(l.base + lineTax)],
-        colWidths, { size: 8, align: 'center' }
-      );
-    }).join(''),
-    PAGE_W
-  );
+  body += buildItemsTableDOCX(gst);;
   body += wPTheme('');
 
   body += wPTheme(`Grand Total: ${fmtINR(gst.total)}`, { bold: true, size: 12, align: 'right' });
