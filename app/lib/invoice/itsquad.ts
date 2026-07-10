@@ -127,27 +127,26 @@ line-height:1.35;
   </tfoot>
 </table>
 
-  <div style="display:flex;justify-content:flex-end;margin-top:8px;">
-    <div style="width:260px;font-size:8pt;line-height:1.7;">
+  <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+    <div style="width:260px;font-size:10.5px;line-height:1.9;">
       <div style="display:flex;justify-content:space-between;"><span>Base Amount</span><span>${fmtINR(gst.base)}</span></div>
       ${gst.isSame
         ? `<div style="display:flex;justify-content:space-between;"><span>CGST @ ${gst.rate / 2}%</span><span>${fmtINR(gst.cgst)}</span></div>
            <div style="display:flex;justify-content:space-between;"><span>SGST @ ${gst.rate / 2}%</span><span>${fmtINR(gst.sgst)}</span></div>`
         : `<div style="display:flex;justify-content:space-between;"><span>IGST @ ${gst.rate}%</span><span>${fmtINR(gst.igst)}</span></div>`
       }
-      <div style="display:flex;justify-content:space-between;font-weight:800;font-size:10.5px;border-top:2px solid #111;margin-top:3px;padding-top:4px;">
+      <div style="display:flex;justify-content:space-between;font-weight:800;font-size:12px;border-top:2px solid #111;margin-top:4px;padding-top:5px;">
         <span>Total</span><span>${fmtINR(gst.total)}</span>
       </div>
     </div>
   </div>
 
-  <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px;border-top:1px solid #333;padding-top:8px;">
-    <div style="width:60%;font-size:6.8pt;line-height:1.55;">
-      <b>Amount in Words: </b> ${numWords(Math.round(gst.total))}   
-    </div>
-    <div style="width:35%;text-align:center;font-size:7.5pt;">
-      <div style="margin-bottom:26px;">For <b>${esc(f.coName)}</b></div>
-      <div style="border-top:1px solid #333;padding-top:3px;">Authorized Signatory</div>
+  <div style="font-size:10px;background:#f9f9f9;border:1px solid #ddd;padding:8px 12px;border-radius:4px;margin-top:14px;margin-bottom:8px;">Amount in Words: ${numWords(Math.round(gst.total))}</div>
+  <div style="font-size:11px;font-weight:800;color:#111;margin-bottom:34px;">From ${esc(f.coName)}</div>
+
+  <div style="display:flex;justify-content:flex-end;">
+    <div style="text-align:center;min-width:180px;">
+      <div style="border-top:1px solid #333;padding-top:4px;font-size:10px;">Authorized Signatory</div>
     </div>
   </div>
 
@@ -319,23 +318,30 @@ y = (doc as any).lastAutoTable.finalY + 8;
     T(`Total   Rs. ${fmtNum(gst.total)}`, R, y, { align: 'right' });
     y += 8;
 
-    doc.setDrawColor(50, 50, 50);
-    doc.line(L, y, R, y);
-    y += 6;
-
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
-    T('Amount in Words:', L, y);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5);
     const words = numWords(Math.round(gst.total)) || '';
-    const wordLines = doc.splitTextToSize(words, W * 0.55);
-    T(wordLines, L, y + 4);
+    const wordLines = doc.splitTextToSize(`Amount in Words: ${words}`, W - 8);
+    const boxH = wordLines.length * 4.2 + 6;
+    doc.setFillColor(247, 247, 247);
+    doc.setDrawColor(150, 150, 150);
+    doc.setLineWidth(0.3);
+    doc.rect(L, y, W, boxH, 'FD');
+    T(wordLines, L + 4, y + 5.5);
+    y += boxH + 8;
 
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    T(`From ${f.coName}`, L, y);
+    y += 14;
+
+    doc.setDrawColor(30, 30, 30); doc.setLineWidth(0.4);
+    doc.line(R - 55, y, R, y);
+    y += 5;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
     T(`For ${f.coName}`, R, y, { align: 'right' });
-    const sigY = y + 10;
-    doc.setDrawColor(50, 50, 50); doc.setLineWidth(0.3);
-    doc.line(R - 40, sigY, R, sigY);
-    T('Authorized Signatory', R, sigY + 4, { align: 'right' });
+    y += 14;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+    T('Authorized Signatory', R, y, { align: 'right' });
 
     return doc.output('blob');
 }
