@@ -1,32 +1,3 @@
-// ═══════════════════════════════════════════════════════════════
-// lib/invoice/lucidus.ts
-// Standalone Lucidus template — structurally different from the
-// default/agastron/modern family (separate Sold By / Bill To /
-// Ship To cards, slimmer product table with tax rolled into a
-// summary block instead of shown per-line). Reuses the same
-// data-extraction helpers (getGSTInfo, pickAddressBlock, etc.) and
-// the wPTheme/wTCTheme/wTRTheme/wTableTheme OOXML helpers already
-// exported from builders.ts — nothing in builders.ts or gst.ts is
-// modified.
-//
-// COLOR PASS v2 (this version): removed ALL solid fill blocks —
-// no green banner, no black banner either. Pure letterhead look:
-// white background, black ink text, thin black/gray rule lines for
-// structure (header underline, table head over/under-rules, row
-// dividers, total rule, footer rule). Table header went from a
-// solid filled bar to a plain ruled row. Totals box went from a
-// shaded box to a top-ruled line. Footer went from a shaded strip
-// to a plain top-ruled line. No layout-width/data/logic changes —
-// getGSTInfo()/getProductLines() contract is unchanged.
-//
-// NOTE: getGSTInfo()/getProductLines() only ever read `qty` and
-// `amount` off each row._products[i] — hsn/rate/discount never reach
-// the engine (discount is already netted into `amount` by the editor
-// before save). HSN below is read positionally from row._products,
-// which is safe because getProductLines() returns row._products
-// verbatim (same order) whenever it's present.
-// ═══════════════════════════════════════════════════════════════
-
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import JSZip from 'jszip';
