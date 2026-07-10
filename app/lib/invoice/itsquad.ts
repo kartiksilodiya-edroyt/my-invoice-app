@@ -304,18 +304,19 @@ autoTable(doc, {
 });
 y = (doc as any).lastAutoTable.finalY + 8;
 
+    const totalsLabelX = R - 55, totalsValX = R;
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
-    T(`Base Amount   ${fmtNum(gst.base)}`, R, y, { align: 'right' }); y += 4.5;
+    T('Base Amount', totalsLabelX, y); T(fmtNum(gst.base), totalsValX, y, { align: 'right' }); y += 4.5;
     if (gst.isSame) {
-      T(`CGST @ ${gst.rate / 2}%   ${fmtNum(gst.cgst)}`, R, y, { align: 'right' }); y += 4.5;
-      T(`SGST @ ${gst.rate / 2}%   ${fmtNum(gst.sgst)}`, R, y, { align: 'right' }); y += 4.5;
+      T(`CGST @ ${gst.rate / 2}%`, totalsLabelX, y); T(fmtNum(gst.cgst), totalsValX, y, { align: 'right' }); y += 4.5;
+      T(`SGST @ ${gst.rate / 2}%`, totalsLabelX, y); T(fmtNum(gst.sgst), totalsValX, y, { align: 'right' }); y += 4.5;
     } else {
-      T(`IGST @ ${gst.rate}%   ${fmtNum(gst.igst)}`, R, y, { align: 'right' }); y += 4.5;
+      T(`IGST @ ${gst.rate}%`, totalsLabelX, y); T(fmtNum(gst.igst), totalsValX, y, { align: 'right' }); y += 4.5;
     }
     doc.setDrawColor(20, 20, 20); doc.setLineWidth(0.4);
-    doc.line(R - 55, y, R, y); y += 4.5;
+    doc.line(totalsLabelX, y, totalsValX, y); y += 4.5;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
-    T(`Total   Rs. ${fmtNum(gst.total)}`, R, y, { align: 'right' });
+    T('Total', totalsLabelX, y); T(`Rs. ${fmtNum(gst.total)}`, totalsValX, y, { align: 'right' });
     y += 8;
 
     doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5);
