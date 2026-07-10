@@ -137,7 +137,8 @@ const rowsHTML = gst.lines.map((item: any, idx: number) => {
   </tbody>
 </table>
 
-<div style="font-size:10px;background:#f9f9f9;border:1px solid #ddd;padding:8px 12px;border-radius:4px;margin-bottom:20px;">Amount in Words: ${esc(words)}</div>
+<div style="font-size:10px;background:#f9f9f9;border:1px solid #ddd;padding:8px 12px;border-radius:4px;margin-bottom:8px;">Amount in Words: ${esc(words)}</div>
+<div style="font-size:11px;font-weight:800;color:#111;margin-bottom:20px;">From ${esc(f.coName)}</div>
 
   <div style="display:flex;justify-content:flex-end;">
     <div style="text-align:center;min-width:180px;">
@@ -326,10 +327,21 @@ doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
 T('Total', boxL, y); T(`Rs. ${fmtNum(gst.total)}`, boxR, y, { align: 'right' });
 y += 9;
 
+
 doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5);
-const wl = doc.splitTextToSize(`Amount in Words: ${words || ''}`, W);
-T(wl, L, y);
-y += wl.length * 4.5 + 10;
+const wl = doc.splitTextToSize(`Amount in Words: ${words || ''}`, W - 8);
+const boxH = wl.length * 4.2 + 6;
+doc.setFillColor(249, 249, 249);
+doc.setDrawColor(221, 221, 221);
+doc.setLineWidth(0.2);
+doc.roundedRect(L, y, W, boxH, 1, 1, 'FD');
+T(wl, L + 4, y + 5.5);
+y += boxH + 8;
+
+doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+T(`From ${f.coName}`, L, y);
+y += 10;
+
 
   // Footer / signature block — cleaner fixed spacing
   doc.setDrawColor(50, 50, 50); doc.setLineWidth(0.3);
