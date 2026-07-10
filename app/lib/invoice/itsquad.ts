@@ -58,9 +58,8 @@ export function buildInvoiceHTMLItsquad(row: any, profile: any, invNum: string, 
 
     // ---- Item rows: Qty | Product | HSN | Model No | Warranty | MRP | Gross | Dis% | GST% | Amount
 const rowsHTML = gst.lines.map((item: any, idx: number) => {
-    const lineTax = item.base * gst.rate / 100;
-    const amount = item.base + lineTax;
-    const unitPrice = item.qty ? item.base / item.qty : item.base;   // base rate, tax excluded
+    const amount = item.base; // already GST-inclusive — do NOT add tax again
+    const unitPrice = item.qty ? amount / item.qty : amount;
     return `<tr>
     <td style="padding:8px 6px;text-align:center;">${idx + 1}</td>
     <td style="padding:8px 6px;">${esc(item.description || 'Item')}</td>
@@ -70,8 +69,8 @@ const rowsHTML = gst.lines.map((item: any, idx: number) => {
   </tr>`;
 }).join('');
 
-    const subTotal = gst.lines.reduce((s: number, l: any) => s + l.base, 0);
-    const gstAmount = gst.total - subTotal;
+    const subTotal = gst.base;
+    const gstAmount = gst.isSame ? (gst.cgst + gst.sgst) : gst.igst;
 
     return `<div style="
 background:#fff;
@@ -268,9 +267,8 @@ export async function buildPDFItsquad(row: any, profile: any, invNum: string, co
 
 const head = [['Sl. No', 'Description', 'Unit Price', 'QTY', 'Amount']];
 const bodyRows = gst.lines.map((l: any, idx: number) => {
-    const lineTax = l.base * gst.rate / 100;
-    const amount = l.base + lineTax;
-    const unitPrice = l.qty ? l.base / l.qty : l.base;   // base rate, tax excluded
+    const amount = l.base; // already GST-inclusive — do NOT add tax again
+    const unitPrice = l.qty ? amount / l.qty : amount;
     return [String(idx + 1), l.description || 'Item', fmtNum(unitPrice), String(l.qty), fmtNum(amount)];
 });
 
@@ -306,8 +304,8 @@ autoTable(doc, {
 });
 y = (doc as any).lastAutoTable.finalY + 8;
 
-    const subTotal = gst.lines.reduce((s: number, l: any) => s + l.base, 0);
-    const gstAmount = gst.total - subTotal;
+    const subTotal = gst.base;
+    const gstAmount = gst.isSame ? (gst.cgst + gst.sgst) : gst.igst;
 
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
     T(`SUB TOTAL   ${fmtNum(subTotal)}`, R, y, { align: 'right' }); y += 4.5;
