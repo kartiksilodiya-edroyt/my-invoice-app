@@ -78,8 +78,7 @@ const rowsHTML = gst.lines.map((item: any, idx: number) => {
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
     <div style="font-size:10.5px;line-height:1.7;max-width:65%;">
       <div>Sold By: <b>${esc(f.coName)}</b>,</div>
-      ${shipFromLines.length ? `<div><i>Address:</i><br>${shipFromLines.map((l: string) => esc(l)).join('<br>')}</div>` : ''}
-     
+      ${f.coAddr ? `<div>Address : ${esc(f.coAddr)}</div>` : ''}
     </div>
     <div style="text-align:right;">
       ${logoBlockHTML}
@@ -89,7 +88,7 @@ const rowsHTML = gst.lines.map((item: any, idx: number) => {
 
   <hr style="border:none;border-top:1px solid #999;margin:12px 0;">
 
-  <div style="display:flex;justify-content:space-between;gap:16px;font-size:10.5px;line-height:1.7;margin-bottom:14px;">
+  <div style="display:flex;justify-content:space-between;gap:16px;font-size:10.5px;line-height:1.7;margin-bottom:6px;">
     <div style="min-width:150px;">
       <div>Order Date: ${esc(f.orderDate)}</div>
       <div>Invoice Date: ${esc(f.orderDate)}</div>
@@ -216,14 +215,12 @@ export async function buildPDFKeshavi(row: any, profile: any, invNum: string, co
   T(`Sold By: ${f.coName},`, L, y);
   y += 5;
 
-  // Ship-from address — 4 lines (2 comma-parts per line)
-  const shipFromLines = splitAddrLines(f.coAddr, 2);
-  if (shipFromLines.length) {
-    doc.setFontSize(8);
-    T('Address:', L, y); y += 4;
-    T(shipFromLines, L, y);
-    y += shipFromLines.length * 3.8;
-    doc.setFontSize(9);
+  // Address — single wrapped paragraph, same font/size as "Sold By"
+  // Width capped at 115mm so it never runs under the Invoice Number box (which starts at R-60 = 136mm)
+  if (f.coAddr) {
+    const addrLines = doc.splitTextToSize(`Address : ${f.coAddr}`, 115);
+    T(addrLines, L, y);
+    y += addrLines.length * 4.2;
   }
   
 
@@ -266,9 +263,9 @@ export async function buildPDFKeshavi(row: any, profile: any, invNum: string, co
   T(sLines, shipX, by);
   by += Math.max(bLines.length, sLines.length) * 4.2;
 
-  if (f.merchantGST) { T(`GSTIN: ${f.merchantGST}`, billX, by); by += 4.5; }
+//  if (f.merchantGST) { T(`GSTIN: ${f.merchantGST}`, billX, by); by += 4.5; }
 
-  y = Math.max(y, by) + 8;
+  y = Math.max(y, by) + 3;
 
 const head = [['Sl. No', 'Description', 'Unit Price', 'QTY', 'Amount']];
 
