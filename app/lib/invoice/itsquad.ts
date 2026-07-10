@@ -299,8 +299,8 @@ autoTable(doc, {
       lineWidth: { top: 0.3, left: 0, right: 0, bottom: 0 },
     },
     bodyStyles: { lineWidth: 0 },
-    columnStyles: { 0: { halign: 'center' }, 1: { halign: 'left' } },
-    didParseCell: function (data: any) { if (data.column.index > 1) data.cell.styles.halign = 'right'; },
+    columnStyles: { 0: { halign: 'center' }, 1: { halign: 'left' }, 3: { halign: 'center' } },
+    didParseCell: function (data: any) { if (data.column.index > 1 && data.column.index !== 3) data.cell.styles.halign = 'right'; },
 });
 y = (doc as any).lastAutoTable.finalY + 8;
 
