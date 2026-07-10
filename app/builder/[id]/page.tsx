@@ -559,8 +559,8 @@ const seller = useMemo(() => ({
                 <div className="inv-top keshavi-top">
                   <div className="keshavi-soldby">
                     <div>Sold By: <b>{seller.name || company?.name || 'Your Company'}</b>,</div>
-                    {seller.address && <div><i>Ship-from Address:</i> {seller.address}</div>}
-                    {seller.gst && <div><b>GSTIN</b> - {seller.gst}</div>}
+                    {seller.address && <div><i>Address:</i> {seller.address}</div>}
+                    
                   </div>
                   <div className="keshavi-logobox">
                     {(merchantLogo || companyLogo) && (
@@ -577,6 +577,7 @@ const seller = useMemo(() => ({
                   <div className="keshavi-meta-left">
                     <div>Order ID: <PField value={row['Seller Settlement Records ID']} onChange={setField('Seller Settlement Records ID')} className="pi-inline" /></div>
                     <div>Order Date: <PField value={row['Transaction Date']} onChange={setField('Transaction Date')} placeholder="DD/MM/YYYY" className="pi-inline" /></div>
+                    {seller.gst && <div><b>GSTIN</b> - {seller.gst}</div>}
                   </div>
                   <div className="keshavi-meta-right">
                     <div className="inv-addr-label" style={{ textAlign: 'right' }}>Billing Address</div>

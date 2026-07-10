@@ -78,8 +78,8 @@ const rowsHTML = gst.lines.map((item: any, idx: number) => {
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
     <div style="font-size:10.5px;line-height:1.7;max-width:65%;">
       <div>Sold By: <b>${esc(f.coName)}</b>,</div>
-      ${shipFromLines.length ? `<div><i>Ship-from Address:</i><br>${shipFromLines.map((l: string) => esc(l)).join('<br>')}</div>` : ''}
-      ${f.coGst ? `<div><b>GSTIN</b> - ${esc(f.coGst)}</div>` : ''}
+      ${shipFromLines.length ? `<div><i>Address:</i><br>${shipFromLines.map((l: string) => esc(l)).join('<br>')}</div>` : ''}
+     
     </div>
     <div style="text-align:right;">
       ${logoBlockHTML}
@@ -94,6 +94,7 @@ const rowsHTML = gst.lines.map((item: any, idx: number) => {
       <div>Order Date: ${esc(f.orderDate)}</div>
       <div>Invoice Date: ${esc(f.orderDate)}</div>
       ${f.coCin ? `<div>CIN: ${esc(f.coCin)}</div>` : ''}
+       ${f.coGst ? `<div><b>GSTIN</b> - ${esc(f.coGst)}</div>` : ''}
     </div>
     <div style="flex:1;max-width:230px;">
       <div style="font-weight:700;">Billing Address</div>
@@ -219,12 +220,12 @@ export async function buildPDFKeshavi(row: any, profile: any, invNum: string, co
   const shipFromLines = splitAddrLines(f.coAddr, 2);
   if (shipFromLines.length) {
     doc.setFontSize(8);
-    T('Ship-from Address:', L, y); y += 4;
+    T('Address:', L, y); y += 4;
     T(shipFromLines, L, y);
     y += shipFromLines.length * 3.8;
     doc.setFontSize(9);
   }
-  if (f.coGst) { T(`GSTIN - ${f.coGst}`, L, y); y += 5; }
+  
 
   doc.setDrawColor(150, 150, 150); doc.setLineWidth(0.2);
   const boxY = Math.max(24, logoBottomY + 3);
@@ -241,6 +242,7 @@ export async function buildPDFKeshavi(row: any, profile: any, invNum: string, co
   T(`Order Date: ${f.orderDate}`, L, y); y += 4.5;
   T(`Invoice Date: ${f.orderDate}`, L, y); y += 4.5;
   if (f.coCin) { T(`CIN: ${f.coCin}`, L, y); y += 4.5; }
+  if (f.coGst) { T(`GSTIN - ${f.coGst}`, L, y); y += 5; }
 
   // Billing (middle) and Shipping (right) — side by side
   const billX = L + 65;
@@ -375,7 +377,7 @@ export async function buildDOCXKeshavi(row: any, profile: any, invNum: string, c
   body += wPTheme('');
   body += wPTheme(`Sold By: ${f.coName},`, { size: 9 });
   if (shipFromLines.length) {
-    body += wPTheme(`Ship-from Address:\n${shipFromLines.join('\n')}`, { size: 8 });
+    body += wPTheme(`Address:\n${shipFromLines.join('\n')}`, { size: 8 });
   }
   if (f.coGst) body += wPTheme(`GSTIN - ${f.coGst}`, { size: 9 });
   body += wPTheme(`Invoice Number # ${invNum}`, { size: 9, align: 'right' });
