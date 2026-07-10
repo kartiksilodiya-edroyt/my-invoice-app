@@ -17,6 +17,123 @@ import {
 } from './utils';
 
 /* ═══════════════════════════════════════════════
+   SHARED ITEMS TABLE — used by every template
+═══════════════════════════════════════════════ */
+export function buildItemsTableHTML(gst: any) {
+  const theme = AGASTRON_THEME;
+  return `<table class="inv-table" style="font-family:${theme.fontFamily};">
+    <thead><tr>
+      <th style="width:10%;background:${theme.headerBgHex};">SI.No</th><th style="width:44%;background:${theme.headerBgHex};">Description</th><th style="width:15%;background:${theme.headerBgHex};">Unit Price</th><th style="width:10%;background:${theme.headerBgHex};">QTY</th>
+      <th style="width:21%;background:${theme.headerBgHex};">Amount</th>
+    </tr></thead>
+ <tbody>
+${gst.lines.map((item: any, index: number) => {
+  const unitPrice = item.unitPrice != null ? item.unitPrice : (item.qty ? item.base / item.qty : item.base);
+  return `
+<tr>
+<td>${index + 1}</td>
+<td><b>${esc(item.description || 'Item')}</b></td>
+<td>${fmtINR(unitPrice)}</td>
+<td>${item.qty}</td>
+<td>${fmtINR(item.base)}</td>
+</tr>
+`;
+}).join('')}
+</tbody><tfoot><tr>
+      <td colspan="4" style="font-weight:700;background:${theme.totalBgHex};">TOTAL:</td>
+      <td style="font-weight:800;background:${theme.totalBgHex};">${fmtINR(gst.total)}</td>
+    </tr></tfoot>
+  </table>`;
+}
+
+export function drawItemsTablePDF(doc: any, gst: any, startY: number, L = 14, R = 196) {
+  const theme = AGASTRON_THEME;
+  const formatNumOnly = (n: any) => cleanNum(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const colAligns = ['center', 'left', 'right', 'center', 'right'];
+
+  // Proportions taken from Agastron's original 18/88/30/18/28 (sum 182),
+  // scaled to whatever L→R width the caller actually uses, so the table
+  // ALWAYS ends exactly at R — same edge the totals block aligns to.
+  const totalW = R - L;
+  const baseWidths = [18, 88, 30, 18, 28];
+  const baseSum = 182;
+  const colWidths = baseWidths.map(w => (w / baseSum) * totalW);
+  const pageW = doc.internal.pageSize.getWidth();
+
+  autoTable(doc, {
+    startY,
+    head: [['Sl. No', 'Description', 'Unit Price', 'QTY', 'Amount']],
+    body: gst.lines.map((l: any, idx: number) => {
+      const unitPrice = l.unitPrice != null ? l.unitPrice : (l.qty ? l.base / l.qty : l.base);
+      return [String(idx + 1), l.description || 'Item', formatNumOnly(unitPrice), String(l.qty), formatNumOnly(l.total != null ? l.total : l.base)];
+    }),
+    foot: [['', '', '', 'TOTAL:', formatNumOnly(gst.total)]],
+    margin: { left: L, right: pageW - R },
+    styles: { font: 'helvetica', fontSize: 8, overflow: 'linebreak', cellPadding: 3, textColor: 30, valign: 'middle' },
+    headStyles: { fillColor: theme.headerBgRGB, textColor: 30, fontStyle: 'bold' },
+    footStyles: { fillColor: theme.totalBgRGB, textColor: 30, fontStyle: 'bold' },
+    columnStyles: {
+      0: { cellWidth: colWidths[0] }, 1: { cellWidth: colWidths[1] }, 2: { cellWidth: colWidths[2] },
+      3: { cellWidth: colWidths[3] }, 4: { cellWidth: colWidths[4] },
+    },
+    didParseCell: function (data: any) { data.cell.styles.halign = colAligns[data.column.index]; }
+  });
+  return (doc as any).lastAutoTable.finalY;
+}
+
+export function buildItemsTableDOCX(gst: any) {
+  const theme = AGASTRON_THEME;
+  const PAGE_W = 9360;
+  const itemWidths = [900, 4560, 1500, 900, 1500];
+  const headerShade = theme.headerBgHex.replace('#', '').toUpperCase();
+  const totalShade = theme.totalBgHex.replace('#', '').toUpperCase();
+
+  return wTableTheme(
+    wTRTheme(['SI.No', 'Description', 'Unit Price', 'QTY', 'Amount'], itemWidths, { bold: true, size: 8, align: 'center', shade: headerShade }) +
+    gst.lines.map((l: any, idx: number) => {
+      const unitPrice = l.unitPrice != null ? l.unitPrice : (l.qty ? l.base / l.qty : l.base);
+      return wTRTheme([String(idx + 1), l.description || 'Item', fmtINR(unitPrice), String(l.qty), fmtINR(l.total != null ? l.total : l.base)], itemWidths, { size: 8, align: 'center' });
+    }).join('') +
+    wTRTheme(['', '', '', 'TOTAL:', fmtINR(gst.total)], itemWidths, { bold: true, size: 8, align: 'right', shade: totalShade }),
+    PAGE_W
+  );
+}
+export function buildTotalsHTML(gst: any) {
+  const totalsRows = gst.isSame
+    ? `<tr><td>Base Amount</td><td>${fmtINR(gst.base)}</td></tr>
+     <tr><td>CGST @ ${gst.rate / 2}%</td><td>${fmtINR(gst.cgst)}</td></tr>
+     <tr><td>SGST @ ${gst.rate / 2}%</td><td>${fmtINR(gst.sgst)}</td></tr>`
+    : `<tr><td>Base Amount</td><td>${fmtINR(gst.base)}</td></tr>
+     <tr><td>IGST @ ${gst.rate}%</td><td>${fmtINR(gst.igst)}</td></tr>`;
+
+  return `<div style="display:flex;justify-content:flex-end;">
+    <table class="inv-totals">
+      ${totalsRows}
+      <tr class="total-final"><td><b>Total</b></td><td><b>${fmtINR(gst.total)}</b></td></tr>
+    </table>
+  </div>`;
+}
+export function drawTotalsPDF(doc: any, gst: any, startY: number, R = 196) {
+  const T = (text: any, x: any, y: any, opts?: any) => doc.text(String(text), x, y, opts);
+  const fmtINRPdf = (n: any) => 'Rs. ' + cleanNum(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const totalsLabelX = R - 50, totalsValX = R;
+  let y = startY;
+
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+  T('Base Amount', totalsLabelX, y); T(fmtINRPdf(gst.base), totalsValX, y, { align: 'right' }); y += 4.5;
+  if (gst.isSame) {
+    T(`CGST @ ${gst.rate / 2}%`, totalsLabelX, y); T(fmtINRPdf(gst.cgst), totalsValX, y, { align: 'right' }); y += 4.5;
+    T(`SGST @ ${gst.rate / 2}%`, totalsLabelX, y); T(fmtINRPdf(gst.sgst), totalsValX, y, { align: 'right' }); y += 4.5;
+  } else {
+    T(`IGST @ ${gst.rate}%`, totalsLabelX, y); T(fmtINRPdf(gst.igst), totalsValX, y, { align: 'right' }); y += 4.5;
+  }
+  doc.setDrawColor(20); doc.setLineWidth(0.4); doc.line(totalsLabelX, y, totalsValX, y); y += 4;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+  T('Total', totalsLabelX, y); T(fmtINRPdf(gst.total), totalsValX, y, { align: 'right' });
+  return y + 7;
+}
+
+/* ═══════════════════════════════════════════════
    DEFAULT TEMPLATE — HTML
 ═══════════════════════════════════════════════ */
 export function buildInvoiceHTML(row: any, profile: any, invNum: string, company: any) {
