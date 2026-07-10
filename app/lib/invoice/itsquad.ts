@@ -60,7 +60,7 @@ export function buildInvoiceHTMLItsquad(row: any, profile: any, invNum: string, 
 const rowsHTML = gst.lines.map((item: any, idx: number) => {
     const lineTax = item.base * gst.rate / 100;
     const amount = item.base + lineTax;
-    const unitPrice = item.qty ? amount / item.qty : amount;
+    const unitPrice = item.qty ? item.base / item.qty : item.base;   // base rate, tax excluded
     return `<tr>
     <td style="padding:8px 6px;text-align:center;">${idx + 1}</td>
     <td style="padding:8px 6px;">${esc(item.description || 'Item')}</td>
@@ -270,7 +270,7 @@ const head = [['Sl. No', 'Description', 'Unit Price', 'QTY', 'Amount']];
 const bodyRows = gst.lines.map((l: any, idx: number) => {
     const lineTax = l.base * gst.rate / 100;
     const amount = l.base + lineTax;
-    const unitPrice = l.qty ? amount / l.qty : amount;
+    const unitPrice = l.qty ? l.base / l.qty : l.base;   // base rate, tax excluded
     return [String(idx + 1), l.description || 'Item', fmtNum(unitPrice), String(l.qty), fmtNum(amount)];
 });
 
