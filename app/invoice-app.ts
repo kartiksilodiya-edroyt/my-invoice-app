@@ -70,6 +70,7 @@ export function initApp() {
     savedInvoices: [],
     generated: [],
     session: null,
+    selectedRowIds: new Set(),
   };
 
   /* ═══════════════════════════════════════════════
@@ -383,11 +384,12 @@ ${rows.length ? `
 <div class="card">
   <div class="row-between" style="margin-bottom:14px;">
     <div class="card-title" style="margin:0;">📋 Transaction Preview (${rows.length} rows)</div>
-    <button class="btn btn-primary" id="genAllBtn">⚡ Generate all ${rows.length} invoices</button>
+    <button class="btn btn-primary" id="genAllBtn">⚡ Generate ${S.selectedRowIds.size ? 'selected (' + S.selectedRowIds.size + ')' : 'all ' + rows.length} invoices</button>
   </div>
   <div class="tbl-wrap">
     <table class="data-table">
       <thead><tr>
+        <th><input type="checkbox" id="selectAllRows" ${rows.length && S.selectedRowIds.size === rows.length ? 'checked' : ''}></th>
         <th>#</th><th>Name Target</th><th>Settlement Record ID</th><th>UTR Number</th>
         <th>Transaction Date</th><th>Amount</th><th>Qty</th><th>GST</th><th>Product List Item</th><th>Template</th><th>Actions</th>
       </tr></thead>
@@ -397,6 +399,7 @@ ${rows.length ? `
           const gst = getGSTInfo(r, profile, S.company);
           const tpl = resolveTemplate(profile, S.company);
           return `<tr>
+            <td><input type="checkbox" class="rowSelect" data-row-select="${i}" ${S.selectedRowIds.has(r.id) ? 'checked' : ''}></td>
             <td style="color:var(--dim);font-size:11px;">${i + 1}</td>
             <td>
               <div style="font-weight:600;font-size:12.5px;">${esc(r['_billName'] || '—')}</div>
@@ -475,7 +478,7 @@ ${gen.length ? `
       inp.addEventListener('change', (e: any) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
     }
     document.getElementById('clearDataBtn')?.addEventListener('click', async () => {
-      S.rows = []; S.generated = []; S.uploadedFileName = null;
+      S.rows = []; S.generated = []; S.uploadedFileName = null; S.selectedRowIds.clear();
       render();
       if (supaReady) {
         try { await dbClearRows(supa); toast('Cleared uploaded data from cloud.', ''); }
@@ -486,6 +489,25 @@ ${gen.length ? `
     document.getElementById('zipAllBtn')?.addEventListener('click', downloadZip);
     document.getElementById('viewLibBtn')?.addEventListener('click', () => goto('library'));
     document.querySelectorAll('[data-preview]').forEach(btn => btn.addEventListener('click', () => showPreviewModal(S.rows[+(btn as HTMLElement).dataset.preview!])));
+
+    document.getElementById('selectAllRows')?.addEventListener('change', (e: any) => {
+      if (e.target.checked) {
+        S.rows.forEach((r: any) => S.selectedRowIds.add(r.id));
+      } else {
+        S.selectedRowIds.clear();
+      }
+      render();
+    });
+    document.querySelectorAll('[data-row-select]').forEach(cb => {
+      cb.addEventListener('change', (e: any) => {
+        const idx = +(cb as HTMLElement).dataset.rowSelect!;
+        const row = S.rows[idx];
+        if (!row) return;
+        if (e.target.checked) S.selectedRowIds.add(row.id);
+        else S.selectedRowIds.delete(row.id);
+        render();
+      });
+    });
 
     // Phase 5 cutover: Edit now navigates to the real /builder/[id] route
     // instead of opening the old showEditModal(). Rows loaded before the
@@ -539,7 +561,7 @@ ${gen.length ? `
         if (!json.length) throw new Error('No rows found in file');
         const grouped = groupSettlementRows(json);
         grouped.forEach(extractAddressFieldsFromRow);
-        S.rows = grouped; S.generated = []; S.uploadedFileName = file.name;
+        S.rows = grouped; S.generated = []; S.uploadedFileName = file.name; S.selectedRowIds.clear();
         render();
         toast(`✓ Loaded ${json.length} rows from ${file.name}`, 'good');
 
@@ -565,8 +587,12 @@ ${gen.length ? `
     if (btn) btn.disabled = true;
     if (prog) prog.style.display = 'block';
 
-    for (let i = 0; i < S.rows.length; i++) {
-      const row = S.rows[i];
+    const rowsToGenerate = S.selectedRowIds.size
+      ? S.rows.filter((r: any) => S.selectedRowIds.has(r.id))
+      : S.rows;
+
+    for (let i = 0; i < rowsToGenerate.length; i++) {
+      const row = rowsToGenerate[i];
       const profile = S.profiles.find((p: any) => matchProfile(p, row['Seller Name']));
       const invNum = genInvNum(row);
       const fileName = genFileName(row);
@@ -596,9 +622,9 @@ ${gen.length ? `
       }
 
       S.generated.push(g);
-      const pct = Math.round(((i + 1) / S.rows.length) * 100);
+      const pct = Math.round(((i + 1) / rowsToGenerate.length) * 100);
       if (bar) bar.style.width = pct + '%';
-      if (txt) txt.textContent = `Saving ${i + 1} of ${S.rows.length} to cloud…`;
+      if (txt) txt.textContent = `Saving ${i + 1} of ${rowsToGenerate.length} to cloud…`;
       if (i % 3 === 0) await new Promise(r => setTimeout(r, 0));
     }
 
@@ -606,7 +632,7 @@ ${gen.length ? `
       try { S.savedInvoices = await dbLoadInvoices(supa); } catch (e) { }
     }
     if (btn) btn.disabled = false;
-    toast(`✅ ${S.rows.length} invoices generated and saved to cloud!`, 'good');
+    toast(`✅ ${rowsToGenerate.length} invoices generated and saved to cloud!`, 'good');
     render();
   }
 
