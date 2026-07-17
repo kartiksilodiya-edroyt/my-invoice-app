@@ -4,8 +4,8 @@
 // Layout: Tax Invoice title (left) + logo (right) header, invoice
 // meta right-aligned under logo, Billing/Shipping side-by-side,
 // 9-column item table w/ TOTAL row inside the table, Amount in
-// Words strip, "From {company}" strip, then a Sold-By footer with
-// PAN/GST/CIN on the right.
+// Words strip, "From {company}" strip, Sold-By footer with
+// PAN/GST/CIN on the right, and an Authorized Signatory block.
 // ═══════════════════════════════════════════════════════════════
 
 import { jsPDF } from 'jspdf';
@@ -193,6 +193,13 @@ line-height:1.45;
       ${f.coCin ? `<div><b>CIN No:</b> ${esc(f.coCin)}</div>` : ''}
     </div>
   </div>
+
+  <div style="display:flex;justify-content:flex-end;margin-top:34px;">
+    <div style="text-align:center;min-width:180px;">
+      <div style="font-weight:700;margin-bottom:20px;">For ${esc(f.coName)}</div>
+      <div style="border-top:1px solid #000;padding-top:4px;font-size:8pt;">Authorized Signatory</div>
+    </div>
+  </div>
 </div>`;
 }
 
@@ -322,6 +329,17 @@ export async function buildPDFPaybuzz(row: any, profile: any, invNum: string, co
     if (f.coGst) { doc.text(`GST Registration No: ${f.coGst}`, R, py, { align: 'right' }); py += 4; }
     if (f.coCin) { doc.text(`CIN No: ${f.coCin}`, R, py, { align: 'right' }); py += 4; }
 
+    // Authorized signatory footer
+    let footY = Math.max(leftFinalY, py) + 14;
+    doc.setDrawColor(0); doc.setLineWidth(0.4);
+    doc.line(R - 55, footY, R, footY);
+    footY += 5;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+    doc.text(`For ${f.coName}`, R, footY, { align: 'right' });
+    footY += 6;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+    doc.text('Authorized Signatory', R, footY, { align: 'right' });
+
     return doc.output('blob');
 }
 
@@ -391,6 +409,14 @@ export async function buildDOCXPaybuzz(row: any, profile: any, invNum: string, c
         ),
         PAGE_W
     );
+
+    // Authorized signatory footer
+    body += wPTheme('');
+    body += wPTheme('');
+    body += wPTheme(`For ${f.coName}`, { bold: true, size: 8, align: 'right' });
+    body += wPTheme('');
+    body += wPTheme('');
+    body += wPTheme('Authorized Signatory', { size: 7.5, align: 'right' });
 
     const z = new JSZip();
     z.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`);
