@@ -21,6 +21,9 @@ import {
 import {
   buildInvoiceHTMLKeshavi, buildPDFKeshavi, buildDOCXKeshavi,
 } from './keshavi';
+import {
+  buildInvoiceHTMLViscose, buildPDFViscose, buildDOCXViscose,
+} from './viscose';
 
 const TEMPLATE_DEFS: any = {
   default: {
@@ -64,6 +67,13 @@ const TEMPLATE_DEFS: any = {
     buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLKeshavi(row, profile, invNum, company),
     buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFKeshavi(row, profile, invNum, company),
     buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXKeshavi(row, profile, invNum, company),
+  },
+  viscose: {
+    key: 'viscose',
+    label: 'Viscose',
+    buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLViscose(row, profile, invNum, company),
+    buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFViscose(row, profile, invNum, company),
+    buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXViscose(row, profile, invNum, company),
   },
 };
 
