@@ -24,6 +24,7 @@ import {
 import {
   buildInvoiceHTMLViscose, buildPDFViscose, buildDOCXViscose,
 } from './viscose';
+import { buildInvoiceHTMLPaybuzz, buildPDFPaybuzz, buildDOCXPaybuzz } from './paybuzz';
 
 const TEMPLATE_DEFS: any = {
   default: {
@@ -74,6 +75,13 @@ const TEMPLATE_DEFS: any = {
     buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLViscose(row, profile, invNum, company),
     buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFViscose(row, profile, invNum, company),
     buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXViscose(row, profile, invNum, company),
+  },
+  paybuzz: {
+    key: 'paybuzz',
+    label: 'Paybuzz',
+    buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLPaybuzz(row, profile, invNum, company),
+    buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFPaybuzz(row, profile, invNum, company),
+    buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXPaybuzz(row, profile, invNum, company),
   },
 };
 
