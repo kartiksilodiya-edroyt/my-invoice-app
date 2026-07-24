@@ -28,7 +28,8 @@ import { buildInvoiceHTMLPaybuzz, buildPDFPaybuzz, buildDOCXPaybuzz } from './pa
 import { buildInvoiceHTMLMerchant1, buildPDFMerchant1, buildDOCXMerchant1 } from './merchant1';
 import { buildInvoiceHTMLMerchant2, buildPDFMerchant2, buildDOCXMerchant2 } from './merchant2';
 import { buildInvoiceHTMLMerchant3, buildPDFMerchant3, buildDOCXMerchant3 } from './merchant3';
-
+import { buildInvoiceHTMLMerchant4, buildPDFMerchant4, buildDOCXMerchant4 } from './merchant4';
+import { buildInvoiceHTMLMerchant5, buildPDFMerchant5, buildDOCXMerchant5 } from './merchant5'; 
 
 const TEMPLATE_DEFS: any = {
   default: {
@@ -107,6 +108,20 @@ const TEMPLATE_DEFS: any = {
     buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLMerchant3(row, profile, invNum, company),
     buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFMerchant3(row, profile, invNum, company),
     buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXMerchant3(row, profile, invNum, company), 
+  },
+  merchant4: {
+    key: 'merchant4',
+    label: 'Merchant 4',
+    buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLMerchant4(row, profile, invNum, company),
+    buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFMerchant4(row, profile, invNum, company),
+    buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXMerchant4(row, profile, invNum, company), 
+  },
+  merchant5: {
+    key: 'merchant5',
+    label: 'Merchant 5',
+    buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLMerchant5(row, profile, invNum, company),
+    buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFMerchant5(row, profile, invNum, company),
+    buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXMerchant5(row, profile, invNum, company), 
   },
 
 };
