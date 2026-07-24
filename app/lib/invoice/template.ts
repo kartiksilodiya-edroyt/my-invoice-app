@@ -25,6 +25,10 @@ import {
   buildInvoiceHTMLViscose, buildPDFViscose, buildDOCXViscose,
 } from './viscose';
 import { buildInvoiceHTMLPaybuzz, buildPDFPaybuzz, buildDOCXPaybuzz } from './paybuzz';
+import { buildInvoiceHTMLMerchant1, buildPDFMerchant1, buildDOCXMerchant1 } from './merchant1';
+import { buildInvoiceHTMLMerchant2, buildPDFMerchant2, buildDOCXMerchant2 } from './merchant2';
+import { buildInvoiceHTMLMerchant3, buildPDFMerchant3, buildDOCXMerchant3 } from './merchant3';
+
 
 const TEMPLATE_DEFS: any = {
   default: {
@@ -83,8 +87,30 @@ const TEMPLATE_DEFS: any = {
     buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFPaybuzz(row, profile, invNum, company),
     buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXPaybuzz(row, profile, invNum, company),
   },
-};
+  merchant1: {
+    key: 'merchant1',
+    label: 'Merchant 1',
+    buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLMerchant1(row, profile, invNum, company),
+    buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFMerchant1(row, profile, invNum, company),
+    buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXMerchant1(row, profile, invNum, company), 
+  },
+  merchant2: {
+    key: 'merchant2',
+    label: 'Merchant 2',
+    buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLMerchant2(row, profile, invNum, company),
+    buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFMerchant2(row, profile, invNum, company),
+    buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXMerchant2(row, profile, invNum, company), 
+  },
+  merchant3: {
+    key: 'merchant3',
+    label: 'Merchant 3',
+    buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLMerchant3(row, profile, invNum, company),
+    buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFMerchant3(row, profile, invNum, company),
+    buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXMerchant3(row, profile, invNum, company), 
+  },
 
+};
+  
 export function resolveTemplate(profile: any, company: any) {
   const key = (profile && profile.template) || 'default';
   const base = TEMPLATE_DEFS[key] || TEMPLATE_DEFS.default;
