@@ -30,6 +30,11 @@ import { buildInvoiceHTMLMerchant2, buildPDFMerchant2, buildDOCXMerchant2 } from
 import { buildInvoiceHTMLMerchant3, buildPDFMerchant3, buildDOCXMerchant3 } from './merchant3';
 import { buildInvoiceHTMLMerchant4, buildPDFMerchant4, buildDOCXMerchant4 } from './merchant4';
 import { buildInvoiceHTMLMerchant5, buildPDFMerchant5, buildDOCXMerchant5 } from './merchant5'; 
+import { buildInvoiceHTMLMerchant6, buildPDFMerchant6, buildDOCXMerchant6 } from './merchant6';
+import { buildInvoiceHTMLMerchant7, buildPDFMerchant7, buildDOCXMerchant7 } from './merchant7';
+import { buildInvoiceHTMLMerchant8, buildPDFMerchant8, buildDOCXMerchant8 } from './merchant8';
+import { buildInvoiceHTMLMerchant9, buildPDFMerchant9, buildDOCXMerchant9 } from './merchant9';
+import { buildInvoiceHTMLMerchant10, buildPDFMerchant10, buildDOCXMerchant10 } from './merchant10';
 
 const TEMPLATE_DEFS: any = {
   default: {
@@ -122,6 +127,36 @@ const TEMPLATE_DEFS: any = {
     buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLMerchant5(row, profile, invNum, company),
     buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFMerchant5(row, profile, invNum, company),
     buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXMerchant5(row, profile, invNum, company), 
+  },
+  merchant6: {
+    key: 'merchant6', label: 'Merchant 6',
+    buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLMerchant6(row, profile, invNum, company),
+    buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFMerchant6(row, profile, invNum, company),
+    buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXMerchant6(row, profile, invNum, company),
+  },
+  merchant7: {
+    key: 'merchant7', label: 'Merchant 7',
+    buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLMerchant7(row, profile, invNum, company),
+    buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFMerchant7(row, profile, invNum, company),
+    buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXMerchant7(row, profile, invNum, company),
+  },
+  merchant8: {
+    key: 'merchant8', label: 'Merchant 8',
+    buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLMerchant8(row, profile, invNum, company),
+    buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFMerchant8(row, profile, invNum, company),
+    buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXMerchant8(row, profile, invNum, company),
+  },
+  merchant9: {
+    key: 'merchant9', label: 'Merchant 9',
+    buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLMerchant9(row, profile, invNum, company),
+    buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFMerchant9(row, profile, invNum, company),
+    buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXMerchant9(row, profile, invNum, company),
+  },
+  merchant10: {
+    key: 'merchant10', label: 'Merchant 10',
+    buildHTML: (row: any, profile: any, invNum: string, company: any) => buildInvoiceHTMLMerchant10(row, profile, invNum, company),
+    buildPDF: (row: any, profile: any, invNum: string, company: any) => buildPDFMerchant10(row, profile, invNum, company),
+    buildDOCX: (row: any, profile: any, invNum: string, company: any) => buildDOCXMerchant10(row, profile, invNum, company),
   },
 
 };
